@@ -10,8 +10,9 @@ import SwiftUI
 @main
 struct dimoApp: App {
     var body: some Scene {
-        WindowGroup {
+        MenuBarExtra("Dimo", systemImage: "display") {
             ContentView()
         }
+        .menuBarExtraStyle(.window)
     }
 }

@@ -10,12 +10,9 @@ struct MonitorInfo {
 @MainActor
 class MonitorManager: ObservableObject {
     @Published var monitors: [MonitorInfo] = []
-    @Published var isLoading = false
 
     init() {
-        DispatchQueue.main.async {
-            self.collectMonitors()
-        }
+        self.collectMonitors()
     }
 
     func collectMonitors() {

@@ -11,19 +11,10 @@ struct ContentView: View {
     @StateObject private var monitorManager = MonitorManager()
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Content
-            Group {
-                if monitorManager.isLoading {
-                    ProgressView("Detecting displays...")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if monitorManager.monitors.isEmpty {
-                    emptyStateView
-                } else {
-                    displayListView
-                }
-            }
-            .padding()
+        if monitorManager.monitors.isEmpty {
+            emptyStateView
+        } else {
+            displayListView
         }
     }
 
@@ -32,36 +23,29 @@ struct ContentView: View {
     private var emptyStateView: some View {
         VStack(spacing: 12) {
             Image(systemName: "display.trianglebadge.exclamationmark")
-                .font(.system(size: 48))
+                .font(.title)
                 .foregroundStyle(.secondary)
 
             Text("No External Displays Found")
                 .font(.headline)
-
-            Text("Connect an external monitor to control its brightness.")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
 
             Button("Refresh") {
                 monitorManager.collectMonitors()
             }
             .padding(.top, 8)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .padding()
     }
 
     private var displayListView: some View {
-        ScrollView {
-            VStack(spacing: 16) {
-                ForEach(monitorManager.monitors, id: \.self.id) { display in
-                    DisplayControlCard(
-                        display: display,
-                        onBrightnessChange: { brightness in
-                            monitorManager.setBrightness(brightness, for: display)
-                        }
-                    )
-                }
+        VStack(spacing: 16) {
+            ForEach(monitorManager.monitors, id: \.self.id) { display in
+                DisplayControlCard(
+                    display: display,
+                    onBrightnessChange: { brightness in
+                        monitorManager.setBrightness(brightness, for: display)
+                    }
+                )
             }
         }
     }
@@ -93,24 +77,28 @@ struct DisplayControlCard: View {
             }
 
             // Brightness slider
-            HStack(spacing: 12) {
-                Image(systemName: "sun.min")
-                    .foregroundStyle(.secondary)
+            HStack {
+                Button("Sub", systemImage: "sun.min.fill") {
+                    sliderValue -= 1
+                }
+                .labelStyle(.iconOnly)
+                .buttonStyle(.borderless)
 
                 Slider(
                     value: $sliderValue,
                     in: 0...100,
-                    step: 1
                 ) { editing in
                     isDragging = editing
                     if !editing {
-                        // Apply brightness when user stops dragging
                         onBrightnessChange(sliderValue)
                     }
                 }
 
-                Image(systemName: "sun.max")
-                    .foregroundStyle(.secondary)
+                Button("Add", systemImage: "sun.max.fill") {
+                    sliderValue += 1
+                }
+                .labelStyle(.iconOnly)
+                .buttonStyle(.borderless)
             }
 
             // Quick preset buttons
@@ -128,7 +116,6 @@ struct DisplayControlCard: View {
             }
         }
         .padding()
-        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
         .onAppear {
             sliderValue = Double(display.brightness)
         }
