@@ -94,7 +94,8 @@ struct DisplayControlCard: View {
             // Brightness slider
             HStack {
                 Button("Sub", systemImage: "sun.min.fill") {
-                    sliderValue -= 1
+                    sliderValue = max(0, sliderValue - 1)
+                    onBrightnessChange(sliderValue)
                 }
                 .labelStyle(.iconOnly)
                 .buttonStyle(.borderless)
@@ -110,7 +111,8 @@ struct DisplayControlCard: View {
                 }
 
                 Button("Add", systemImage: "sun.max.fill") {
-                    sliderValue += 1
+                    sliderValue = min(100, sliderValue + 1)
+                    onBrightnessChange(sliderValue)
                 }
                 .labelStyle(.iconOnly)
                 .buttonStyle(.borderless)

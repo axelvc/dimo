@@ -50,7 +50,6 @@ class MonitorManager {
         let idCString = monitor.id.cString(using: .utf8)
 
         guard brightness > 0 && brightness <= 100 else {
-            print(brightness)
             return
         }
 

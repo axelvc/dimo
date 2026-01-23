@@ -22,7 +22,8 @@ struct SettingsView: View {
                     store.addSchedule(
                         BrightnessScheduleEntry(
                             time: nowComponents,
-                            percent: 50
+                            percent: 50,
+                            isEnabled: true
                         )
                     )
                 }
@@ -69,6 +70,9 @@ struct BrightnessScheduleEditorView: View {
 
     var body: some View {
         HStack {
+            Toggle("Enabled", isOn: enabledBinding)
+                .labelsHidden()
+
             Text("At")
 
             DatePicker(
@@ -79,6 +83,7 @@ struct BrightnessScheduleEditorView: View {
             .datePickerStyle(.field)
             .labelsHidden()
             .padding(.bottom, -2)
+            .disabled(!entry.isEnabled)
 
             Text("set brightness to")
 
@@ -86,6 +91,7 @@ struct BrightnessScheduleEditorView: View {
                 showSlider = true
             }
             .buttonStyle(.bordered)
+            .disabled(!entry.isEnabled)
             .popover(isPresented: $showSlider, arrowEdge: .bottom) {
                 Slider(value: percentBinding, in: 0...100)
                     .frame(width: 200)
@@ -101,6 +107,7 @@ struct BrightnessScheduleEditorView: View {
             .labelStyle(.iconOnly)
         }
         .padding()
+        .opacity(entry.isEnabled ? 1 : 0.6)
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
 
@@ -123,6 +130,12 @@ struct BrightnessScheduleEditorView: View {
         )
     }
 
+    private var enabledBinding: Binding<Bool> {
+        Binding(
+            get: { entry.isEnabled },
+            set: { entry.isEnabled = $0 }
+        )
+    }
 }
 
 // MARK: - utilities

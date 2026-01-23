@@ -4,6 +4,7 @@ struct BrightnessScheduleEntry: Identifiable, Codable, Equatable {
     var id: UUID = UUID()
     var time: DateComponents?
     var percent: Int
+    var isEnabled: Bool = true
 }
 
 @MainActor
