@@ -7,9 +7,12 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		0077CDEF2F231106003391CC /* CoreDisplay.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0077CDEE2F231106003391CC /* CoreDisplay.framework */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		0077CDEC2F2310CF003391CC /* CoreGraphics.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreGraphics.framework; path = ../../../../System/Library/Frameworks/CoreGraphics.framework; sourceTree = "<group>"; };
+		0077CDEE2F231106003391CC /* CoreDisplay.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreDisplay.framework; path = ../../../../System/Library/Frameworks/CoreDisplay.framework; sourceTree = "<group>"; };
 		00F598582F1CC47E00966CCA /* dimo.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = dimo.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
@@ -26,16 +29,27 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0077CDEF2F231106003391CC /* CoreDisplay.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		0077CDEB2F2310CF003391CC /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				0077CDEE2F231106003391CC /* CoreDisplay.framework */,
+				0077CDEC2F2310CF003391CC /* CoreGraphics.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
 		00F5984F2F1CC47E00966CCA = {
 			isa = PBXGroup;
 			children = (
 				00F5985A2F1CC47E00966CCA /* dimo */,
+				0077CDEB2F2310CF003391CC /* Frameworks */,
 				00F598592F1CC47E00966CCA /* Products */,
 			);
 			sourceTree = "<group>";
@@ -190,6 +204,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OBJC_BRIDGING_HEADER = dimo/Libraries/include/ddc_handler.h;
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
@@ -247,6 +262,7 @@
 				MTL_FAST_MATH = YES;
 				SDKROOT = macosx;
 				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OBJC_BRIDGING_HEADER = dimo/Libraries/include/ddc_handler.h;
 			};
 			name = Release;
 		};
@@ -268,6 +284,10 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/dimo/Libraries",
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "axel-vc.dimo";
@@ -301,6 +321,10 @@
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					"$(PROJECT_DIR)/dimo/Libraries",
 				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "axel-vc.dimo";

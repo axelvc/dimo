@@ -17,7 +17,7 @@ struct ContentView: View {
                 if monitorManager.isLoading {
                     ProgressView("Detecting displays...")
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                } else if monitorManager.displays.isEmpty {
+                } else if monitorManager.monitors.isEmpty {
                     emptyStateView
                 } else {
                     displayListView
@@ -44,7 +44,7 @@ struct ContentView: View {
                 .multilineTextAlignment(.center)
 
             Button("Refresh") {
-                monitorManager.collectDisplays()
+                monitorManager.collectMonitors()
             }
             .padding(.top, 8)
         }
@@ -54,7 +54,7 @@ struct ContentView: View {
     private var displayListView: some View {
         ScrollView {
             VStack(spacing: 16) {
-                ForEach(monitorManager.displays, id: \.self.id) { display in
+                ForEach(monitorManager.monitors, id: \.self.id) { display in
                     DisplayControlCard(
                         display: display,
                         onBrightnessChange: { brightness in
@@ -70,7 +70,7 @@ struct ContentView: View {
 // MARK: - Display Control Card
 
 struct DisplayControlCard: View {
-    let display: Display
+    let display: MonitorInfo
     let onBrightnessChange: (Double) -> Void
 
     @State private var sliderValue: Double = 50
@@ -130,11 +130,11 @@ struct DisplayControlCard: View {
         .padding()
         .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
         .onAppear {
-            sliderValue = display.brightness
+            sliderValue = Double(display.brightness)
         }
         .onChange(of: display.brightness) { _, newValue in
             if !isDragging {
-                sliderValue = newValue
+                sliderValue = Double(newValue)
             }
         }
     }
