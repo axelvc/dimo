@@ -1,20 +1,34 @@
 //
-//  ContentView.swift
+//  MenuBarView.swift
 //  dimo
 //
-//  External monitor brightness control UI
+//  Created by Axel on 22/01/26.
 //
 
 import SwiftUI
 
-struct ContentView: View {
+struct MenuBarView: View {
     @State private var monitorManager = MonitorManager()
+    @Environment(\.openWindow) var openWindow
 
     var body: some View {
-        if monitorManager.monitors.isEmpty {
-            emptyStateView
-        } else {
-            displayListView
+        VStack(spacing: 0) {
+
+            if monitorManager.monitors.isEmpty {
+                emptyStateView
+            } else {
+                displayListView
+            }
+
+            Divider()
+
+            Button(action: { openWindow(id: "settings") }) {
+                Text("Setting...")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.accessoryBar)
+            .cornerRadius(.infinity)
+            .padding(4)
         }
     }
 
@@ -80,7 +94,7 @@ struct DisplayControlCard: View {
             // Brightness slider
             HStack {
                 Button("Sub", systemImage: "sun.min.fill") {
-                    display.brightness -= 1
+                    sliderValue -= 1
                 }
                 .labelStyle(.iconOnly)
                 .buttonStyle(.borderless)
@@ -129,5 +143,5 @@ struct DisplayControlCard: View {
 }
 
 #Preview {
-    ContentView()
+    MenuBarView()
 }

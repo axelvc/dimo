@@ -1,3 +1,4 @@
+import CoreLocation
 import SwiftUI
 
 struct MonitorInfo {
@@ -12,7 +13,7 @@ class MonitorManager {
     var monitors: [MonitorInfo] = []
 
     init() {
-        self.collectMonitors()
+        collectMonitors()
     }
 
     func collectMonitors() {
@@ -47,6 +48,11 @@ class MonitorManager {
 
     func setBrightness(_ brightness: Double, for monitor: MonitorInfo) {
         let idCString = monitor.id.cString(using: .utf8)
+
+        guard brightness > 0 && brightness <= 100 else {
+            print(brightness)
+            return
+        }
 
         idCString?.withUnsafeBytes { ptr in
             if let baseAddress = ptr.baseAddress {

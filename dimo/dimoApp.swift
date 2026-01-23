@@ -11,8 +11,12 @@ import SwiftUI
 struct dimoApp: App {
     var body: some Scene {
         MenuBarExtra("Dimo", systemImage: "display") {
-            ContentView()
+            MenuBarView()
         }
         .menuBarExtraStyle(.window)
+
+        Window("Settings", id: "settings") {
+            SettingsView()
+        }
     }
 }
