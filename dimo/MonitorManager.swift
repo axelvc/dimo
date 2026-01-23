@@ -1,15 +1,15 @@
-import Combine
-import Foundation
+import SwiftUI
 
 struct MonitorInfo {
     let id: String
     let name: String
-    let brightness: UInt16
+    var brightness: UInt16
 }
 
 @MainActor
-class MonitorManager: ObservableObject {
-    @Published var monitors: [MonitorInfo] = []
+@Observable
+class MonitorManager {
+    var monitors: [MonitorInfo] = []
 
     init() {
         self.collectMonitors()

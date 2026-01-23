@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct ContentView: View {
-    @StateObject private var monitorManager = MonitorManager()
+    @State private var monitorManager = MonitorManager()
 
     var body: some View {
         if monitorManager.monitors.isEmpty {
@@ -39,9 +39,9 @@ struct ContentView: View {
 
     private var displayListView: some View {
         VStack(spacing: 16) {
-            ForEach(monitorManager.monitors, id: \.self.id) { display in
+            ForEach($monitorManager.monitors, id: \.id) { $display in
                 DisplayControlCard(
-                    display: display,
+                    display: $display,
                     onBrightnessChange: { brightness in
                         monitorManager.setBrightness(brightness, for: display)
                     }
@@ -54,7 +54,7 @@ struct ContentView: View {
 // MARK: - Display Control Card
 
 struct DisplayControlCard: View {
-    let display: MonitorInfo
+    @Binding var display: MonitorInfo
     let onBrightnessChange: (Double) -> Void
 
     @State private var sliderValue: Double = 50
@@ -74,12 +74,13 @@ struct DisplayControlCard: View {
                 Text("\(Int(sliderValue))%")
                     .font(.system(.body, design: .monospaced))
                     .foregroundStyle(.secondary)
+                    .contentTransition(.numericText())
             }
 
             // Brightness slider
             HStack {
                 Button("Sub", systemImage: "sun.min.fill") {
-                    sliderValue -= 1
+                    display.brightness -= 1
                 }
                 .labelStyle(.iconOnly)
                 .buttonStyle(.borderless)
