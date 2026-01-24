@@ -9,7 +9,8 @@ struct MonitorInfo {
 
 @MainActor
 @Observable
-class MonitorManager {
+class MonitorController {
+    static let shared = MonitorController()
     var monitors: [MonitorInfo] = []
 
     init() {
@@ -58,6 +59,12 @@ class MonitorManager {
                 let id = baseAddress.assumingMemoryBound(to: Int8.self)
                 ddc_set_monitor_brightness(id, UInt16(brightness))
             }
+        }
+    }
+
+    func setBrightness(_ brightness: UInt16) {
+        for monitor in monitors {
+            setBrightness(Double(brightness), for: monitor)
         }
     }
 }

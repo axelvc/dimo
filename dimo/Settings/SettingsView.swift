@@ -8,145 +8,206 @@
 import SwiftUI
 
 struct SettingsView: View {
-    @State private var store = SettingsStore()
-    @State private var editorEntry: BrightnessScheduleEntry?
+    @State private var scheduler = BrightnessScheduler.shared
+    @State private var editingSchedule: BrightnessSchedule?
+    @State private var isPresentingNewSchedule = false
+
+    private let timeFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.timeStyle = .short
+        return formatter
+    }()
 
     var body: some View {
-        VStack {
-            HStack {
-                Text("Schedule")
-                    .font(.headline)
-                Spacer()
-                Button("Add Schedule", systemImage: "plus") {
-                    let nowComponents = Calendar.current.dateComponents([.hour, .minute], from: Date())
-                    store.addSchedule(
-                        BrightnessScheduleEntry(
-                            time: nowComponents,
-                            percent: 50,
-                            isEnabled: true
-                        )
-                    )
-                }
-                .labelStyle(.iconOnly)
-            }
+        VStack(alignment: .leading, spacing: 16) {
+            headerView
 
-            if sortedEntries.isEmpty {
-                Spacer()
-                Text("No schedules yet")
-                    .foregroundStyle(.secondary)
+            if scheduler.schedules.isEmpty {
+                ContentUnavailableView(
+                    "No schedules",
+                    systemImage: "clock",
+                    description: Text(
+                        "Create a schedule to automate brightness changes."
+                    )
+                )
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 VStack {
-                    ForEach(sortedEntries) { entry in
-                        HStack {
-                            BrightnessScheduleEditorView(
-                                entry: entry,
-                                onDelete: {
-                                    store.removeSchedule(id: entry.id)
-                                }
-                            )
-                        }
+                    ForEach(scheduler.schedules) { schedule in
+                        scheduleRow(for: schedule)
                     }
+                    Spacer()
                 }
             }
-
-            Spacer()
         }
-        .frame(minWidth: 350, idealWidth: 350, idealHeight: 700)
         .padding()
+        .frame(minWidth: 420, minHeight: 360)
+        .sheet(item: $editingSchedule) { schedule in
+            BrightnessScheduleEditorView(schedule: schedule) { updatedSchedule in
+                scheduler.saveSchedule(updatedSchedule)
+            }
+        }
+        .sheet(isPresented: $isPresentingNewSchedule) {
+            BrightnessScheduleEditorView(schedule: nil) { newSchedule in
+                scheduler.saveSchedule(newSchedule)
+            }
+        }
     }
 
-    private var sortedEntries: [BrightnessScheduleEntry] {
-        store.schedules.sorted {
-            getTimeDate(for: $0.time) < getTimeDate(for: $1.time)
+    private var headerView: some View {
+        HStack {
+            Text("Brightness Schedules")
+                .font(.title2)
+                .fontWeight(.semibold)
+
+            Spacer()
+
+            Button("Add Schedule", systemImage: "plus") {
+                isPresentingNewSchedule = true
+            }
+            .buttonStyle(.borderedProminent)
         }
+    }
+
+    private func scheduleRow(for schedule: BrightnessSchedule) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(formattedTime(schedule))
+                    .font(.headline)
+
+                Text("Brightness: \(schedule.percent)%")
+                    .foregroundStyle(.secondary)
+            }
+
+            Spacer()
+
+            Toggle("Enabled", isOn: binding(for: schedule))
+                .toggleStyle(.switch)
+                .labelsHidden()
+                .controlSize(.small)
+
+            Button("Edit", systemImage: "pencil") {
+                editingSchedule = schedule
+            }
+            .labelStyle(.iconOnly)
+
+            Button("Delete", systemImage: "trash") {
+                scheduler.removeSchedule(id: schedule.id)
+            }
+            .labelStyle(.iconOnly)
+            .foregroundStyle(.red)
+        }
+        .padding()
+        .background(Color(nsColor: .windowBackgroundColor), in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func formattedTime(_ schedule: BrightnessSchedule) -> String {
+        let calendar = Calendar.current
+        var components = calendar.dateComponents(
+            [.year, .month, .day],
+            from: Date()
+        )
+        components.hour = schedule.time.hour
+        components.minute = schedule.time.minute
+        let date = calendar.date(from: components) ?? Date()
+        return timeFormatter.string(from: date)
+    }
+
+    private func binding(for schedule: BrightnessSchedule) -> Binding<Bool> {
+        Binding(
+            get: { schedule.isEnabled },
+            set: { isEnabled in
+                var updated = schedule
+                updated.isEnabled = isEnabled
+                scheduler.saveSchedule(updated)
+            }
+        )
     }
 }
 
-struct BrightnessScheduleEditorView: View {
-    @State var entry: BrightnessScheduleEntry
-    let onDelete: () -> Void
+private struct BrightnessScheduleEditorView: View {
+    @Environment(\.dismiss) private var dismiss
 
-    @State private var showSlider = false
+    let schedule: BrightnessSchedule?
+    let onSave: (BrightnessSchedule) -> Void
+
+    @State private var time: Date
+    @State private var percent: Double
+    @State private var isEnabled: Bool
+
+    init(
+        schedule: BrightnessSchedule?,
+        onSave: @escaping (BrightnessSchedule) -> Void
+    ) {
+        let calendar = Calendar.current
+        var components = calendar.dateComponents(
+            [.year, .month, .day, .hour, .minute],
+            from: Date()
+        )
+
+        if let time = schedule?.time {
+            components.hour = time.hour
+            components.minute = time.minute
+        }
+
+        _time = State(initialValue: calendar.date(from: components) ?? Date())
+        _percent = State(initialValue: Double(schedule?.percent ?? 50))
+        _isEnabled = State(initialValue: schedule?.isEnabled ?? true)
+        self.schedule = schedule
+        self.onSave = onSave
+    }
 
     var body: some View {
-        HStack {
-            Toggle("Enabled", isOn: enabledBinding)
-                .labelsHidden()
+        VStack(alignment: .leading) {
+            Text(schedule == nil ? "New Schedule" : "Edit Schedule")
+                .font(.title2)
+                .fontWeight(.semibold)
+                .padding()
 
-            Text("At")
-
-            DatePicker(
-                "Time",
-                selection: timeBinding,
-                displayedComponents: .hourAndMinute
-            )
-            .datePickerStyle(.field)
-            .labelsHidden()
-            .padding(.bottom, -2)
-            .disabled(!entry.isEnabled)
-
-            Text("set brightness to")
-
-            Button("\(entry.percent)%") {
-                showSlider = true
+            Form {
+                DatePicker(
+                    "Time",
+                    selection: $time,
+                    displayedComponents: .hourAndMinute
+                )
+                HStack {
+                    Text("Brightness")
+                    Slider(value: $percent, in: 0...100)
+                    Text("\(Int(percent))%")
+                }
+                Toggle("Enabled", isOn: $isEnabled)
             }
-            .buttonStyle(.bordered)
-            .disabled(!entry.isEnabled)
-            .popover(isPresented: $showSlider, arrowEdge: .bottom) {
-                Slider(value: percentBinding, in: 0...100)
-                    .frame(width: 200)
-                    .padding()
-            }
+            .formStyle(.grouped)
+            .contentMargins(0)
 
-            Spacer()
+            HStack {
+                Spacer()
 
-            Button("Remove", systemImage: "trash") {
-                onDelete()
+                Button("Cancel") {
+                    dismiss()
+                }
+
+                Button("Save") {
+                    onSave(buildSchedule())
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
             }
-            .foregroundStyle(.red)
-            .labelStyle(.iconOnly)
+            .padding()
         }
-        .padding()
-        .opacity(entry.isEnabled ? 1 : 0.6)
-        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 12))
     }
 
-    private var timeBinding: Binding<Date> {
-        Binding(
-            get: {
-                getTimeDate(for: entry.time)
-            },
-            set: { newDate in
-                let components = Calendar.current.dateComponents([.hour, .minute], from: newDate)
-                entry.time = components
-            }
+    private func buildSchedule() -> BrightnessSchedule {
+        let calendar = Calendar.current
+        let components = calendar.dateComponents([.hour, .minute], from: time)
+
+        return BrightnessSchedule(
+            id: schedule?.id ?? UUID(),
+            time: components,
+            percent: UInt16(percent),
+            isEnabled: isEnabled
         )
     }
-
-    private var percentBinding: Binding<Double> {
-        Binding(
-            get: { Double(entry.percent) },
-            set: { entry.percent = Int($0) }
-        )
-    }
-
-    private var enabledBinding: Binding<Bool> {
-        Binding(
-            get: { entry.isEnabled },
-            set: { entry.isEnabled = $0 }
-        )
-    }
-}
-
-// MARK: - utilities
-
-func getTimeDate(for components: DateComponents?) -> Date {
-    let calendar = Calendar.current
-    var merged = calendar.dateComponents([.year, .month, .day], from: Date())
-    merged.hour = components?.hour ?? 0
-    merged.minute = components?.minute ?? 0
-    merged.second = 0
-    return calendar.date(from: merged) ?? Date()
 }
 
 #Preview {

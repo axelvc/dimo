@@ -8,13 +8,13 @@
 import SwiftUI
 
 struct MenuBarView: View {
-    @State private var monitorManager = MonitorManager()
+    @State private var monitorController = MonitorController.shared
     @Environment(\.openWindow) var openWindow
 
     var body: some View {
         VStack(spacing: 0) {
 
-            if monitorManager.monitors.isEmpty {
+            if monitorController.monitors.isEmpty {
                 emptyStateView
             } else {
                 displayListView
@@ -44,7 +44,7 @@ struct MenuBarView: View {
                 .font(.headline)
 
             Button("Refresh") {
-                monitorManager.collectMonitors()
+                monitorController.collectMonitors()
             }
             .padding(.top, 8)
         }
@@ -53,11 +53,11 @@ struct MenuBarView: View {
 
     private var displayListView: some View {
         VStack(spacing: 16) {
-            ForEach($monitorManager.monitors, id: \.id) { $display in
+            ForEach($monitorController.monitors, id: \.id) { $display in
                 DisplayControlCard(
                     display: $display,
                     onBrightnessChange: { brightness in
-                        monitorManager.setBrightness(brightness, for: display)
+                        monitorController.setBrightness(brightness, for: display)
                     }
                 )
             }
