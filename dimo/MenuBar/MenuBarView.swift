@@ -9,6 +9,7 @@ import SwiftUI
 
 struct MenuBarView: View {
     @State private var monitorController = MonitorController.shared
+    @State private var settingsStore = SettingsStore.shared
     @Environment(\.openWindow) var openWindow
 
     var body: some View {
@@ -53,9 +54,10 @@ struct MenuBarView: View {
 
     private var displayListView: some View {
         VStack(spacing: 16) {
-            ForEach($monitorController.monitors, id: \.id) { $display in
+            ForEach(monitorController.monitors, id: \.id) { display in
                 DisplayControlCard(
-                    display: $display,
+                    display: display,
+                    showPresetBar: settingsStore.showPresetBar,
                     onBrightnessChange: { brightness in
                         monitorController.setBrightness(brightness, for: display)
                     }
@@ -68,7 +70,8 @@ struct MenuBarView: View {
 // MARK: - Display Control Card
 
 struct DisplayControlCard: View {
-    @Binding var display: MonitorInfo
+    let display: MonitorInfo
+    let showPresetBar: Bool
     let onBrightnessChange: (Double) -> Void
 
     @State private var sliderValue: Double = 50
@@ -118,17 +121,18 @@ struct DisplayControlCard: View {
                 .buttonStyle(.borderless)
             }
 
-            // Quick preset buttons
-            HStack(spacing: 8) {
-                ForEach(presets, id: \.self) { preset in
-                    Button("\(preset)%") {
-                        withAnimation {
-                            sliderValue = Double(preset)
+            if showPresetBar {
+                HStack(spacing: 8) {
+                    ForEach(presets, id: \.self) { preset in
+                        Button("\(preset)%") {
+                            withAnimation {
+                                sliderValue = Double(preset)
+                            }
+                            onBrightnessChange(Double(preset))
                         }
-                        onBrightnessChange(Double(preset))
+                        .buttonStyle(.bordered)
+                        .controlSize(.small)
                     }
-                    .buttonStyle(.bordered)
-                    .controlSize(.small)
                 }
             }
         }

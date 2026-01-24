@@ -54,6 +54,7 @@ final class BrightnessScheduler {
         schedules = store.schedules
         rescheduleAll()
     }
+
     private func rescheduleAll() {
         timers.values.forEach { $0.invalidate() }
         timers.removeAll()

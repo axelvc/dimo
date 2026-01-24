@@ -8,6 +8,60 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @State private var settingsStore = SettingsStore.shared
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 20) {
+                GeneralSettingsGroup(store: settingsStore)
+                SchedulesSettingsGroup(store: settingsStore)
+            }
+            .padding()
+        }
+        .frame(minWidth: 520, minHeight: 520)
+    }
+}
+
+private struct GeneralSettingsGroup: View {
+    @Bindable var store: SettingsStore
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("General")
+                .font(.title3)
+                .fontWeight(.semibold)
+
+            settingsCard {
+                SettingsToggleRow(
+                    title: "Open on startup",
+                    isOn: openOnStartupBinding
+                )
+                Divider()
+                SettingsToggleRow(
+                    title: "Show preset bar",
+                    isOn: showPresetBarBinding
+                )
+            }
+        }
+    }
+
+    private var openOnStartupBinding: Binding<Bool> {
+        Binding(
+            get: { store.openOnStartup },
+            set: { store.setOpenOnStartup($0) }
+        )
+    }
+
+    private var showPresetBarBinding: Binding<Bool> {
+        Binding(
+            get: { store.showPresetBar },
+            set: { store.setShowPresetBar($0) }
+        )
+    }
+}
+
+private struct SchedulesSettingsGroup: View {
+    @Bindable var store: SettingsStore
     @State private var scheduler = BrightnessScheduler.shared
     @State private var editingSchedule: BrightnessSchedule?
     @State private var isPresentingNewSchedule = false
@@ -22,26 +76,24 @@ struct SettingsView: View {
         VStack(alignment: .leading, spacing: 16) {
             headerView
 
-            if scheduler.schedules.isEmpty {
-                ContentUnavailableView(
-                    "No schedules",
-                    systemImage: "clock",
-                    description: Text(
-                        "Create a schedule to automate brightness changes."
-                    )
+            settingsCard {
+                SettingsToggleRow(
+                    title: "Notify when set time",
+                    isOn: notifyBinding
                 )
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            } else {
-                VStack {
-                    ForEach(scheduler.schedules) { schedule in
-                        scheduleRow(for: schedule)
-                    }
-                    Spacer()
+
+                if scheduler.schedules.isEmpty {
+                    Divider()
+                    Text("Create a schedule to automate brightness changes.")
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal)
+                        .padding(.vertical, 12)
+                } else {
+                    Divider()
+                    scheduleListView
                 }
             }
         }
-        .padding()
-        .frame(minWidth: 420, minHeight: 360)
         .sheet(item: $editingSchedule) { schedule in
             BrightnessScheduleEditorView(schedule: schedule) { updatedSchedule in
                 scheduler.saveSchedule(updatedSchedule)
@@ -56,8 +108,8 @@ struct SettingsView: View {
 
     private var headerView: some View {
         HStack {
-            Text("Brightness Schedules")
-                .font(.title2)
+            Text("Schedules")
+                .font(.title3)
                 .fontWeight(.semibold)
 
             Spacer()
@@ -66,6 +118,19 @@ struct SettingsView: View {
                 isPresentingNewSchedule = true
             }
             .buttonStyle(.borderedProminent)
+        }
+    }
+
+    private var scheduleListView: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(scheduler.schedules.enumerated()), id: \.element.id) {
+                index, schedule in
+                scheduleRow(for: schedule)
+
+                if index < scheduler.schedules.count - 1 {
+                    Divider()
+                }
+            }
         }
     }
 
@@ -97,8 +162,8 @@ struct SettingsView: View {
             .labelStyle(.iconOnly)
             .foregroundStyle(.red)
         }
-        .padding()
-        .background(Color(nsColor: .windowBackgroundColor), in: RoundedRectangle(cornerRadius: 16))
+        .padding(.horizontal)
+        .padding(.vertical, 10)
     }
 
     private func formattedTime(_ schedule: BrightnessSchedule) -> String {
@@ -113,6 +178,13 @@ struct SettingsView: View {
         return timeFormatter.string(from: date)
     }
 
+    private var notifyBinding: Binding<Bool> {
+        Binding(
+            get: { store.notifyOnSchedule },
+            set: { store.setNotifyOnSchedule($0) }
+        )
+    }
+
     private func binding(for schedule: BrightnessSchedule) -> Binding<Bool> {
         Binding(
             get: { schedule.isEnabled },
@@ -123,6 +195,51 @@ struct SettingsView: View {
             }
         )
     }
+}
+
+private struct SettingsToggleRow: View {
+    let title: String
+    let isOn: Binding<Bool>
+
+    var body: some View {
+        HStack {
+            Text(title)
+                .font(.headline)
+
+            Spacer()
+
+            Toggle("", isOn: isOn)
+                .labelsHidden()
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 10)
+    }
+}
+
+private struct SettingsCard<Content: View>: View {
+    let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            content
+        }
+        .background(
+            Color(nsColor: .windowBackgroundColor),
+            in: RoundedRectangle(cornerRadius: 16)
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .stroke(Color(nsColor: .separatorColor), lineWidth: 0.5)
+        )
+    }
+}
+
+private func settingsCard<Content: View>(@ViewBuilder content: () -> Content) -> some View {
+    SettingsCard(content: content)
 }
 
 private struct BrightnessScheduleEditorView: View {
