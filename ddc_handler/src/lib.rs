@@ -86,8 +86,8 @@ pub extern "C" fn ddc_free_monitors(monitors: *mut CMonitorInfo, count: usize) {
 
     # Arguments
 
-    * `monitor_id` - The id of the monitor to set the brightness of.
     * `percent` - The brightness to set the monitor to.
+    * `monitor_id` - The id of the monitor to set the brightness of.
 
     # Returns
 
@@ -95,7 +95,7 @@ pub extern "C" fn ddc_free_monitors(monitors: *mut CMonitorInfo, count: usize) {
     * `false` - If the brightness was not set successfully.
 */
 #[unsafe(no_mangle)]
-pub extern "C" fn ddc_set_monitor_brightness(monitor_id: *const c_char, percent: u16) -> bool {
+pub extern "C" fn ddc_set_monitor_brightness(percent: u16, monitor_id: *const c_char) -> bool {
     if monitor_id.is_null() {
         return false;
     }
@@ -106,5 +106,22 @@ pub extern "C" fn ddc_set_monitor_brightness(monitor_id: *const c_char, percent:
         Err(_) => return false,
     };
 
-    monitor::set_brightness(id_str, percent).is_ok()
+    monitor::set_brightness(percent, Some(id_str)).is_ok()
+}
+
+/**
+    Set the brightness of all monitors.
+
+    # Arguments
+
+    * `percent` - The brightness to set the monitor to.
+
+    # Returns
+
+    * `true` - If the brightness was set successfully.
+    * `false` - If the brightness was not set successfully.
+*/
+#[unsafe(no_mangle)]
+pub extern "C" fn ddc_set_brightness(percent: u16) -> bool {
+    monitor::set_brightness(percent, None).is_ok()
 }

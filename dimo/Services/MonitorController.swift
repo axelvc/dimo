@@ -48,24 +48,22 @@ class MonitorController: MonitorControlling {
         self.monitors = monitors
     }
 
-    func setBrightness(_ brightness: UInt16, for monitor: MonitorInfo) {
+    func setBrightness(_ percent: UInt16, for monitor: MonitorInfo) {
         let idCString = monitor.id.cString(using: .utf8)
 
-        guard brightness > 0 && brightness <= 100 else {
+        guard percent > 0 && percent <= 100 else {
             return
         }
 
         idCString?.withUnsafeBytes { ptr in
             if let baseAddress = ptr.baseAddress {
                 let id = baseAddress.assumingMemoryBound(to: Int8.self)
-                ddc_set_monitor_brightness(id, brightness)
+                ddc_set_monitor_brightness(percent, id)
             }
         }
     }
 
-    func setBrightness(_ brightness: UInt16) {
-        for monitor in monitors {
-            setBrightness(brightness, for: monitor)
-        }
+    func setBrightness(_ percent: UInt16) {
+        ddc_set_brightness(percent)
     }
 }

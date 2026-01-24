@@ -27,7 +27,7 @@ pub fn collect_monitors() -> Result<Vec<MonitorInfo>, String> {
     Ok(monitors)
 }
 
-pub fn set_brightness(monitor_id: &str, percent: u16) -> Result<(), String> {
+pub fn set_brightness(percent: u16, monitor_id: Option<&str>) -> Result<(), String> {
     if percent > 100 {
         return Err("Percentage must be between 0 and 100".to_string());
     }
@@ -35,10 +35,12 @@ pub fn set_brightness(monitor_id: &str, percent: u16) -> Result<(), String> {
     let monitors = get_monitors()?;
 
     for (index, mut monitor) in monitors.into_iter().enumerate() {
-        let id = monitor.serial_number().unwrap_or_else(|| index.to_string());
+        if let Some(monitor_id) = monitor_id {
+            let id = monitor.serial_number().unwrap_or_else(|| index.to_string());
 
-        if id != monitor_id {
-            continue;
+            if id != monitor_id {
+                continue;
+            }
         }
 
         let max = get_brightness(&mut monitor)?.maximum();
@@ -51,7 +53,10 @@ pub fn set_brightness(monitor_id: &str, percent: u16) -> Result<(), String> {
         return Ok(());
     }
 
-    Err(format!("monitor with id '{}' not found", monitor_id))
+    match monitor_id {
+        Some(id) => Err(format!("monitor with id '{}' not found", id)),
+        None => Err("No monitors found".to_string()),
+    }
 }
 
 fn get_monitors() -> Result<Vec<Monitor>, String> {

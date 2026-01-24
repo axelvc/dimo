@@ -44,13 +44,26 @@ void ddc_free_monitors(struct MonitorInfo *monitors,
  *
  *    # Arguments
  *
- *    * `monitor_id` - The id of the monitor to set the brightness of.     * `percent` - The brightness to set the monitor to.
+ *    * `percent` - The brightness to set the monitor to.     * `monitor_id` - The id of the monitor to set the brightness of.
  *
  *    # Returns
  *
  *    * `true` - If the brightness was set successfully.     * `false` - If the brightness was not set successfully.
  */
-bool ddc_set_monitor_brightness(const char *monitor_id,
-                                uint16_t percent);
+bool ddc_set_monitor_brightness(uint16_t percent,
+                                const char *monitor_id);
+
+/**
+ *     Set the brightness of all monitors.
+ *
+ *    # Arguments
+ *
+ *    * `percent` - The brightness to set the monitor to.
+ *
+ *    # Returns
+ *
+ *    * `true` - If the brightness was set successfully.     * `false` - If the brightness was not set successfully.
+ */
+bool ddc_set_brightness(uint16_t percent);
 
 #endif  /* DDC_HANDLER_H */
