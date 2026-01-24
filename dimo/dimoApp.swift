@@ -9,6 +9,8 @@ import SwiftUI
 
 @main
 struct dimoApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegator.self) private var appDelegator
+
     var body: some Scene {
         MenuBarExtra("Dimo", systemImage: "display") {
             MenuBarView()
