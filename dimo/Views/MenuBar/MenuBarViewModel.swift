@@ -38,7 +38,7 @@ final class MenuBarViewModel {
         monitorController.collectMonitors()
     }
 
-    func setBrightness(_ brightness: Double, for monitor: MonitorInfo) {
+    func setBrightness(_ brightness: UInt16, for monitor: MonitorInfo) {
         monitorController.setBrightness(brightness, for: monitor)
     }
 }

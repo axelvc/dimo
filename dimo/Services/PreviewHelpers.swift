@@ -21,10 +21,10 @@
             // Mock implementation - already has monitors
         }
 
-        func setBrightness(_ brightness: Double, for monitor: MonitorInfo) {
+        func setBrightness(_ brightness: UInt16, for monitor: MonitorInfo) {
             // Mock implementation
             if let index = monitors.firstIndex(where: { $0.id == monitor.id }) {
-                monitors[index].brightness = UInt16(brightness)
+                monitors[index].brightness = brightness
             }
         }
 

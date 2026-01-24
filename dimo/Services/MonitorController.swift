@@ -5,7 +5,7 @@ import SwiftUI
 protocol MonitorControlling: Observable {
     var monitors: [MonitorInfo] { get }
     func collectMonitors()
-    func setBrightness(_ brightness: Double, for monitor: MonitorInfo)
+    func setBrightness(_ brightness: UInt16, for monitor: MonitorInfo)
     func setBrightness(_ brightness: UInt16)
 }
 
@@ -48,7 +48,7 @@ class MonitorController: MonitorControlling {
         self.monitors = monitors
     }
 
-    func setBrightness(_ brightness: Double, for monitor: MonitorInfo) {
+    func setBrightness(_ brightness: UInt16, for monitor: MonitorInfo) {
         let idCString = monitor.id.cString(using: .utf8)
 
         guard brightness > 0 && brightness <= 100 else {
@@ -58,14 +58,14 @@ class MonitorController: MonitorControlling {
         idCString?.withUnsafeBytes { ptr in
             if let baseAddress = ptr.baseAddress {
                 let id = baseAddress.assumingMemoryBound(to: Int8.self)
-                ddc_set_monitor_brightness(id, UInt16(brightness))
+                ddc_set_monitor_brightness(id, brightness)
             }
         }
     }
 
     func setBrightness(_ brightness: UInt16) {
         for monitor in monitors {
-            setBrightness(Double(brightness), for: monitor)
+            setBrightness(brightness, for: monitor)
         }
     }
 }
