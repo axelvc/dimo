@@ -70,6 +70,7 @@ struct DisplayControlCard: View {
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
+                        .buttonSizing(.flexible)
                     }
                 }
             }
