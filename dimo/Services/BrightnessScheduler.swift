@@ -7,22 +7,26 @@
 
 import Foundation
 
-struct BrightnessSchedule: Identifiable, Codable, Equatable {
-    var id: UUID = UUID()
-    var time: DateComponents
-    var percent: UInt16
-    var isEnabled: Bool = true
+protocol BrightnessScheduling: Observable {
+    var schedules: [BrightnessSchedule] { get }
+    func removeSchedule(id: UUID)
+    func saveSchedule(_ schedule: BrightnessSchedule)
 }
 
 @Observable
-final class BrightnessScheduler {
-    static let shared = BrightnessScheduler()
+final class BrightnessScheduler: BrightnessScheduling {
+    private let settingsStore: any SettingsStoring
+    private let monitorController: any MonitorControlling
 
-    private let store = SettingsStore.shared
     private(set) var schedules: [BrightnessSchedule] = []
     private var timers: [UUID: Timer] = [:]
 
-    init() {
+    init(
+        settingsStore: any SettingsStoring,
+        monitorController: any MonitorControlling
+    ) {
+        self.settingsStore = settingsStore
+        self.monitorController = monitorController
         loadSchedules()
     }
 
@@ -30,7 +34,7 @@ final class BrightnessScheduler {
         timers[id]?.invalidate()
         timers.removeValue(forKey: id)
         schedules.removeAll { $0.id == id }
-        store.saveSchedules(schedules)
+        settingsStore.saveSchedules(schedules)
     }
 
     func saveSchedule(_ schedule: BrightnessSchedule) {
@@ -47,11 +51,11 @@ final class BrightnessScheduler {
             scheduleTimer(for: schedule)
         }
 
-        store.saveSchedules(schedules)
+        settingsStore.saveSchedules(schedules)
     }
 
     private func loadSchedules() {
-        schedules = store.schedules
+        schedules = settingsStore.schedules
         rescheduleAll()
     }
 
@@ -95,6 +99,6 @@ final class BrightnessScheduler {
     }
 
     private func executeBrightnessChange(_ schedule: BrightnessSchedule) {
-        MonitorController.shared.setBrightness(schedule.percent)
+        monitorController.setBrightness(schedule.percent)
     }
 }

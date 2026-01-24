@@ -1,10 +1,20 @@
 import Foundation
 import ServiceManagement
 
-@Observable
-final class SettingsStore {
-    static let shared = SettingsStore()
+protocol SettingsStoring: Observable {
+    var schedules: [BrightnessSchedule] { get }
+    var openOnStartup: Bool { get }
+    var showPresetBar: Bool { get }
+    var notifyOnSchedule: Bool { get }
 
+    func saveSchedules(_ schedules: [BrightnessSchedule])
+    func setOpenOnStartup(_ isEnabled: Bool)
+    func setShowPresetBar(_ isEnabled: Bool)
+    func setNotifyOnSchedule(_ isEnabled: Bool)
+}
+
+@Observable
+final class SettingsStore: SettingsStoring {
     private let storageKey = "SettingsStore.v1"
 
     private struct StoredState: Codable {

@@ -1,16 +1,17 @@
 import CoreLocation
 import SwiftUI
 
-struct MonitorInfo {
-    let id: String
-    let name: String
-    var brightness: UInt16
+@MainActor
+protocol MonitorControlling: Observable {
+    var monitors: [MonitorInfo] { get }
+    func collectMonitors()
+    func setBrightness(_ brightness: Double, for monitor: MonitorInfo)
+    func setBrightness(_ brightness: UInt16)
 }
 
 @MainActor
 @Observable
-class MonitorController {
-    static let shared = MonitorController()
+class MonitorController: MonitorControlling {
     var monitors: [MonitorInfo] = []
 
     init() {

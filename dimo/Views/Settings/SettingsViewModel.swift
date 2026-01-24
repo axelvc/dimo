@@ -1,0 +1,66 @@
+//
+//  SettingsViewModel.swift
+//  dimo
+//
+//  Created by OpenCode Refactoring on 24/01/26.
+//
+
+import Foundation
+import Observation
+
+@MainActor
+@Observable
+final class SettingsViewModel {
+    private let settingsStore: any SettingsStoring
+    private let scheduler: any BrightnessScheduling
+
+    var openOnStartup: Bool {
+        settingsStore.openOnStartup
+    }
+
+    var showPresetBar: Bool {
+        settingsStore.showPresetBar
+    }
+
+    var notifyOnSchedule: Bool {
+        settingsStore.notifyOnSchedule
+    }
+
+    var schedules: [BrightnessSchedule] {
+        scheduler.schedules
+    }
+
+    init(
+        settingsStore: any SettingsStoring,
+        scheduler: any BrightnessScheduling
+    ) {
+        self.settingsStore = settingsStore
+        self.scheduler = scheduler
+    }
+
+    func setOpenOnStartup(_ isEnabled: Bool) {
+        settingsStore.setOpenOnStartup(isEnabled)
+    }
+
+    func setShowPresetBar(_ isEnabled: Bool) {
+        settingsStore.setShowPresetBar(isEnabled)
+    }
+
+    func setNotifyOnSchedule(_ isEnabled: Bool) {
+        settingsStore.setNotifyOnSchedule(isEnabled)
+    }
+
+    func saveSchedule(_ schedule: BrightnessSchedule) {
+        scheduler.saveSchedule(schedule)
+    }
+
+    func removeSchedule(id: UUID) {
+        scheduler.removeSchedule(id: id)
+    }
+
+    func toggleSchedule(_ schedule: BrightnessSchedule, isEnabled: Bool) {
+        var updated = schedule
+        updated.isEnabled = isEnabled
+        scheduler.saveSchedule(updated)
+    }
+}
