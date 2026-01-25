@@ -17,6 +17,35 @@ class KeyboardShortcutManager {
     ) {
         self.settingsStore = settingsStore
         self.monitorController = monitorController
+        observeKeyboardShortcutsSetting()
+    }
+
+    private func observeKeyboardShortcutsSetting() {
+        Task { @MainActor in
+            var wasEnabled = settingsStore.keyboardShortcutsEnabled
+
+            while !Task.isCancelled {
+                withObservationTracking {
+                    _ = settingsStore.keyboardShortcutsEnabled
+                } onChange: {
+                    Task { @MainActor in
+                        let isEnabled = self.settingsStore.keyboardShortcutsEnabled
+
+                        if isEnabled != wasEnabled {
+                            if isEnabled {
+                                self.startMonitoring()
+                            } else {
+                                self.stopMonitoring()
+                            }
+                            wasEnabled = isEnabled
+                        }
+                    }
+                }
+
+                // Yield to avoid blocking
+                await Task.yield()
+            }
+        }
     }
 
     func startMonitoring() {
