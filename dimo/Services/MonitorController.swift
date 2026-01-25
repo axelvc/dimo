@@ -58,20 +58,18 @@ class MonitorController: MonitorControlling {
         idCString?.withUnsafeBytes { ptr in
             if let baseAddress = ptr.baseAddress {
                 let id = baseAddress.assumingMemoryBound(to: Int8.self)
-                ddc_set_monitor_brightness(percent, id)
+                let changed = ddc_set_monitor_brightness(percent, id)
+                if changed { monitor.brightness = percent }
             }
         }
+
     }
 
     func setBrightness(_ percent: UInt16) {
         ddc_set_brightness(percent)
-        var monitors: [MonitorInfo] = []
 
-        for var monitor in self.monitors {
+        for monitor in self.monitors {
             monitor.brightness = percent
-            monitors.append(monitor)
         }
-
-        self.monitors = monitors
     }
 }

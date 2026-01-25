@@ -17,21 +17,15 @@
             MonitorInfo(id: "2", name: "Dell Monitor", brightness: 50),
         ]
 
-        func collectMonitors() {
-            // Mock implementation - already has monitors
-        }
+        func collectMonitors() {}
 
         func setBrightness(_ brightness: UInt16, for monitor: MonitorInfo) {
-            // Mock implementation
-            if let index = monitors.firstIndex(where: { $0.id == monitor.id }) {
-                monitors[index].brightness = brightness
-            }
+            monitor.brightness = brightness
         }
 
         func setBrightness(_ brightness: UInt16) {
-            // Mock implementation - set all monitors
-            for i in monitors.indices {
-                monitors[i].brightness = brightness
+            for monitor in monitors {
+                monitor.brightness = brightness
             }
         }
     }

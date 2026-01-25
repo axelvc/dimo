@@ -7,8 +7,15 @@
 
 import Foundation
 
-struct MonitorInfo: Identifiable, Equatable {
+@Observable
+class MonitorInfo: Identifiable {
     let id: String
     let name: String
     var brightness: UInt16
+
+    init(id: String, name: String, brightness: UInt16) {
+        self.id = id
+        self.name = name
+        self.brightness = brightness
+    }
 }
