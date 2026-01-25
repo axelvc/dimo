@@ -6,11 +6,15 @@ protocol SettingsStoring: Observable {
     var openOnStartup: Bool { get }
     var showPresetBar: Bool { get }
     var notifyOnSchedule: Bool { get }
+    var keyboardShortcutsEnabled: Bool { get }
+    var brightnessStepSize: Int { get }
 
     func saveSchedules(_ schedules: [BrightnessSchedule])
     func setOpenOnStartup(_ isEnabled: Bool)
     func setShowPresetBar(_ isEnabled: Bool)
     func setNotifyOnSchedule(_ isEnabled: Bool)
+    func setKeyboardShortcutsEnabled(_ isEnabled: Bool)
+    func setBrightnessStepSize(_ stepSize: Int)
 }
 
 @Observable
@@ -22,12 +26,16 @@ final class SettingsStore: SettingsStoring {
         var openOnStartup: Bool = false
         var showPresetBar: Bool = true
         var notifyOnSchedule: Bool = false
+        var keyboardShortcutsEnabled: Bool = true
+        var brightnessStepSize: Int = 5
     }
 
     private(set) var schedules: [BrightnessSchedule] = []
     var openOnStartup = false
     var showPresetBar = true
     var notifyOnSchedule = false
+    var keyboardShortcutsEnabled = true
+    var brightnessStepSize = 5
 
     init() {
         if let data = UserDefaults.standard.data(forKey: storageKey),
@@ -37,6 +45,8 @@ final class SettingsStore: SettingsStoring {
             self.openOnStartup = state.openOnStartup
             self.showPresetBar = state.showPresetBar
             self.notifyOnSchedule = state.notifyOnSchedule
+            self.keyboardShortcutsEnabled = state.keyboardShortcutsEnabled
+            self.brightnessStepSize = state.brightnessStepSize
         }
 
         updateLoginItem(enabled: openOnStartup)
@@ -63,12 +73,24 @@ final class SettingsStore: SettingsStoring {
         saveState()
     }
 
+    func setKeyboardShortcutsEnabled(_ isEnabled: Bool) {
+        keyboardShortcutsEnabled = isEnabled
+        saveState()
+    }
+
+    func setBrightnessStepSize(_ stepSize: Int) {
+        brightnessStepSize = max(1, min(20, stepSize))
+        saveState()
+    }
+
     private func saveState() {
         let state = StoredState(
             schedules: schedules,
             openOnStartup: openOnStartup,
             showPresetBar: showPresetBar,
-            notifyOnSchedule: notifyOnSchedule
+            notifyOnSchedule: notifyOnSchedule,
+            keyboardShortcutsEnabled: keyboardShortcutsEnabled,
+            brightnessStepSize: brightnessStepSize,
         )
         if let data = try? JSONEncoder().encode(state) {
             UserDefaults.standard.set(data, forKey: storageKey)

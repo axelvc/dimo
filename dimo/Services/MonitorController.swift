@@ -65,5 +65,13 @@ class MonitorController: MonitorControlling {
 
     func setBrightness(_ percent: UInt16) {
         ddc_set_brightness(percent)
+        var monitors: [MonitorInfo] = []
+
+        for var monitor in self.monitors {
+            monitor.brightness = percent
+            monitors.append(monitor)
+        }
+
+        self.monitors = monitors
     }
 }

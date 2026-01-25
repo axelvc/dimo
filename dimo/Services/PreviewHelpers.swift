@@ -41,6 +41,8 @@
         var openOnStartup = true
         var showPresetBar = true
         var notifyOnSchedule = false
+        var keyboardShortcutsEnabled = true
+        var brightnessStepSize = 5
 
         func saveSchedules(_ schedules: [BrightnessSchedule]) {
             self.schedules = schedules
@@ -56,6 +58,14 @@
 
         func setNotifyOnSchedule(_ isEnabled: Bool) {
             notifyOnSchedule = isEnabled
+        }
+
+        func setKeyboardShortcutsEnabled(_ isEnabled: Bool) {
+            keyboardShortcutsEnabled = isEnabled
+        }
+
+        func setBrightnessStepSize(_ stepSize: Int) {
+            brightnessStepSize = stepSize
         }
     }
 

@@ -26,6 +26,14 @@ final class SettingsViewModel {
         settingsStore.notifyOnSchedule
     }
 
+    var keyboardShortcutsEnabled: Bool {
+        settingsStore.keyboardShortcutsEnabled
+    }
+
+    var brightnessStepSize: Int {
+        settingsStore.brightnessStepSize
+    }
+
     var schedules: [BrightnessSchedule] {
         scheduler.schedules
     }
@@ -48,6 +56,14 @@ final class SettingsViewModel {
 
     func setNotifyOnSchedule(_ isEnabled: Bool) {
         settingsStore.setNotifyOnSchedule(isEnabled)
+    }
+
+    func setKeyboardShortcutsEnabled(_ isEnabled: Bool) {
+        settingsStore.setKeyboardShortcutsEnabled(isEnabled)
+    }
+
+    func setBrightnessStepSize(_ stepSize: Int) {
+        settingsStore.setBrightnessStepSize(stepSize)
     }
 
     func saveSchedule(_ schedule: BrightnessSchedule) {
