@@ -10,13 +10,13 @@ import SwiftUI
 struct MenuBarView: View {
     @Environment(\.monitorController) private var monitorController
     @Environment(\.settingsStore) private var settingsStore
-    @Environment(\.openWindow) private var openWindow
+    @Environment(\.openSettings) private var openSettings
 
     var body: some View {
         MenuBarContentView(
             monitorController: monitorController,
             settingsStore: settingsStore,
-            openWindow: openWindow
+            openSettings: openSettings
         )
     }
 }
@@ -26,18 +26,18 @@ struct MenuBarView: View {
 private struct MenuBarContentView: View {
     let monitorController: any MonitorControlling
     let settingsStore: any SettingsStoring
-    let openWindow: OpenWindowAction
+    let openSettings: OpenSettingsAction
 
     @State private var viewModel: MenuBarViewModel
 
     init(
         monitorController: any MonitorControlling,
         settingsStore: any SettingsStoring,
-        openWindow: OpenWindowAction
+        openSettings: OpenSettingsAction
     ) {
         self.monitorController = monitorController
         self.settingsStore = settingsStore
-        self.openWindow = openWindow
+        self.openSettings = openSettings
         self._viewModel = State(
             initialValue: MenuBarViewModel(
                 monitorController: monitorController,
@@ -55,8 +55,8 @@ private struct MenuBarContentView: View {
 
             Divider()
 
-            Button(action: { openWindow(id: "settings") }) {
-                Text("Setting...")
+            Button(action: { openSettings() }) {
+                Text("Settings...")
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .buttonStyle(.accessoryBar)

@@ -19,7 +19,7 @@ struct dimoApp: App {
         }
         .menuBarExtraStyle(.window)
 
-        Window("Settings", id: "settings") {
+        Settings {
             SettingsView()
                 .environment(\.settingsStore, appDelegate.settingsStore)
                 .environment(\.brightnessScheduler, appDelegate.brightnessScheduler)
