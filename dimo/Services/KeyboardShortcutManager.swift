@@ -9,6 +9,34 @@ class KeyboardShortcutManager {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
 
+    private static let pendingBrightnessFeedbackIntervalMS: UInt64 = 50
+    private var pendingBrightnessFeedbackTask: Task<Void, Never>?
+
+    private var lastBrightnessTarget: UInt16?
+    private var lastAppliedPendingBrightness: UInt16?
+
+    private enum BrightnessKey {
+        case decrease
+        case increase
+
+        static func from(_ event: CGEvent) -> BrightnessKey? {
+            let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+
+            switch keyCode {
+            case 145:
+                return .decrease
+            case 144:
+                return .increase
+            default:
+                return nil
+            }
+        }
+    }
+
+    private var activeBrightnessKey: BrightnessKey?
+    private var brightnessBeforeKeyHold: UInt16?
+    private var pendingBrightness: UInt16?
+
     var onBrightnessChanged: ((UInt16) -> Void)?
 
     init(
@@ -17,35 +45,6 @@ class KeyboardShortcutManager {
     ) {
         self.settingsStore = settingsStore
         self.monitorController = monitorController
-        observeKeyboardShortcutsSetting()
-    }
-
-    private func observeKeyboardShortcutsSetting() {
-        Task { @MainActor in
-            var wasEnabled = settingsStore.keyboardShortcutsEnabled
-
-            while !Task.isCancelled {
-                withObservationTracking {
-                    _ = settingsStore.keyboardShortcutsEnabled
-                } onChange: {
-                    Task { @MainActor in
-                        let isEnabled = self.settingsStore.keyboardShortcutsEnabled
-
-                        if isEnabled != wasEnabled {
-                            if isEnabled {
-                                self.startMonitoring()
-                            } else {
-                                self.stopMonitoring()
-                            }
-                            wasEnabled = isEnabled
-                        }
-                    }
-                }
-
-                // Yield to avoid blocking
-                await Task.yield()
-            }
-        }
     }
 
     func startMonitoring() {
@@ -57,7 +56,7 @@ class KeyboardShortcutManager {
         }
 
         // Create event tap
-        let eventMask = (1 << CGEventType.keyDown.rawValue)
+        let eventMask = (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue)
 
         guard
             let eventTap = CGEvent.tapCreate(
@@ -72,7 +71,7 @@ class KeyboardShortcutManager {
 
                     // Handle the event
                     Task { @MainActor in
-                        manager.handleCGEvent(event)
+                        manager.handleCGEvent(type: type, event: event)
                     }
 
                     // Pass through the event
@@ -98,6 +97,8 @@ class KeyboardShortcutManager {
     }
 
     func stopMonitoring() {
+        stopPendingBrightnessFeedback()
+
         if let eventTap = eventTap {
             CGEvent.tapEnable(tap: eventTap, enable: false)
 
@@ -116,50 +117,153 @@ class KeyboardShortcutManager {
             kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true
         ]
 
-        let accessEnabled = AXIsProcessTrustedWithOptions(options)
-
-        return accessEnabled
+        return AXIsProcessTrustedWithOptions(options)
     }
 
-    private func handleCGEvent(_ event: CGEvent) {
+    private func handleCGEvent(type: CGEventType, event: CGEvent) {
+        switch type {
+        case .keyDown:
+            handleKeyDown(event)
+        case .keyUp:
+            handleKeyUp(event)
+        default:
+            break
+        }
+    }
+
+    private func currentBrightnessValue() -> UInt16 {
+        pendingBrightness ?? lastBrightnessTarget ?? (monitorController.monitors.first?.brightness ?? 50)
+    }
+
+    private func handleKeyDown(_ event: CGEvent) {
         guard settingsStore.keyboardShortcutsEnabled else {
             return
         }
 
-        let hasFn = event.flags.contains(.maskSecondaryFn)
+        guard event.flags.contains(.maskSecondaryFn) else {
+            return
+        }
 
-        if hasFn {
-            let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
-            let decreaseKey = Int64(145)
-            let increaseKey = Int64(144)
+        guard let key = BrightnessKey.from(event) else {
+            return
+        }
 
-            if keyCode == decreaseKey {
-                decreaseBrightness()
-            } else if keyCode == increaseKey {
-                increaseBrightness()
+        if activeBrightnessKey != key {
+            activeBrightnessKey = key
+            let currentBrightness = currentBrightnessValue()
+            brightnessBeforeKeyHold = currentBrightness
+            pendingBrightness = currentBrightness
+            lastBrightnessTarget = currentBrightness
+        }
+
+        startPendingBrightnessFeedback()
+
+        guard let newBrightness = stepPendingBrightness(for: key) else {
+            return
+        }
+
+        lastBrightnessTarget = newBrightness
+        onBrightnessChanged?(newBrightness)
+    }
+
+    private func handleKeyUp(_ event: CGEvent) {
+        guard let key = BrightnessKey.from(event) else {
+            return
+        }
+
+        guard activeBrightnessKey == key else {
+            return
+        }
+
+        defer { resetPendingBrightness() }
+
+        guard settingsStore.keyboardShortcutsEnabled else {
+            return
+        }
+
+        guard
+            let initialBrightness = brightnessBeforeKeyHold,
+            let finalBrightness = pendingBrightness
+        else {
+            return
+        }
+
+        guard finalBrightness != initialBrightness else {
+            return
+        }
+
+        lastBrightnessTarget = finalBrightness
+        applyPendingBrightnessIfNeeded()
+    }
+
+    private func applyPendingBrightnessIfNeeded() {
+        guard let pending = pendingBrightness, pending != lastAppliedPendingBrightness else {
+            return
+        }
+
+        monitorController.setBrightness(pending)
+        onBrightnessChanged?(pending)
+        lastAppliedPendingBrightness = pending
+    }
+
+    private func startPendingBrightnessFeedback() {
+        guard pendingBrightnessFeedbackTask == nil else {
+            return
+        }
+
+        pendingBrightnessFeedbackTask = Task { @MainActor [weak self] in
+            guard let self else {
+                return
             }
+
+            while !Task.isCancelled {
+                guard self.activeBrightnessKey != nil else {
+                    break
+                }
+
+                self.applyPendingBrightnessIfNeeded()
+
+                do {
+                    try await Task.sleep(for: .milliseconds(Self.pendingBrightnessFeedbackIntervalMS))
+                } catch {
+                    break
+                }
+            }
+
+            self.pendingBrightnessFeedbackTask = nil
         }
     }
 
-    private func decreaseBrightness() {
-        adjustBrightness(delta: -settingsStore.brightnessStepSize)
+    private func stopPendingBrightnessFeedback() {
+        pendingBrightnessFeedbackTask?.cancel()
+        pendingBrightnessFeedbackTask = nil
+        lastAppliedPendingBrightness = nil
     }
 
-    private func increaseBrightness() {
-        adjustBrightness(delta: settingsStore.brightnessStepSize)
-    }
+    private func stepPendingBrightness(for key: BrightnessKey) -> UInt16? {
+        let stepsize = settingsStore.brightnessStepSize
+        let delta =
+            switch key {
+            case .decrease: -stepsize
+            case .increase: stepsize
+            }
 
-    private func adjustBrightness(delta: Int) {
-        let currentBrightness = monitorController.monitors.first?.brightness ?? 50
-
+        let currentBrightness = currentBrightnessValue()
         let clampValue = max(0, min(100, Int(currentBrightness) + delta))
         let newBrightness = UInt16(clampValue)
 
         guard newBrightness != currentBrightness else {
-            return
+            return nil
         }
 
-        monitorController.setBrightness(newBrightness)
-        onBrightnessChanged?(newBrightness)
+        pendingBrightness = newBrightness
+        return newBrightness
+    }
+
+    private func resetPendingBrightness() {
+        stopPendingBrightnessFeedback()
+        activeBrightnessKey = nil
+        brightnessBeforeKeyHold = nil
+        pendingBrightness = nil
     }
 }
