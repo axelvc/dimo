@@ -118,8 +118,14 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
         }
     }
 
+    private static var isRunningInXcodePreviews: Bool {
+        ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+    }
+
     private func checkAccessibilityPermissions(promptForPermission: Bool) -> Bool {
-        if promptForPermission {
+        let shouldPromptForPermission = promptForPermission && !Self.isRunningInXcodePreviews
+
+        if shouldPromptForPermission {
             let options: NSDictionary = [
                 kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true
             ]

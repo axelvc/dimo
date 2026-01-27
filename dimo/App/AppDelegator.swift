@@ -8,6 +8,10 @@
 import AppKit
 
 final class AppDelegator: NSObject, NSApplicationDelegate {
+    private static var isRunningInXcodePreviews: Bool {
+        ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
+    }
+
     // Service instances - created once at app launch
     @MainActor
     private(set) lazy var monitorController: MonitorController = {
@@ -59,9 +63,12 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
         Task { @MainActor in
             _ = hudManager
             if settingsStore.keyboardShortcutsEnabled {
-                keyboardManager.startMonitoring(promptForPermission: true)
+                keyboardManager.startMonitoring(promptForPermission: !Self.isRunningInXcodePreviews)
             }
-            registerAccessibilityObserver()
+
+            if !Self.isRunningInXcodePreviews {
+                registerAccessibilityObserver()
+            }
         }
     }
 
