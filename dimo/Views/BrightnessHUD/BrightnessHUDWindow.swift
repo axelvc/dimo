@@ -13,7 +13,7 @@ class BrightnessHUDWindow: NSWindow {
 
         self.isOpaque = false
         self.backgroundColor = .clear
-        self.hasShadow = true
+        self.hasShadow = false
         self.level = .statusBar  // Float above normal windows
         self.collectionBehavior = [.canJoinAllSpaces, .stationary]
         self.ignoresMouseEvents = true  // Click-through

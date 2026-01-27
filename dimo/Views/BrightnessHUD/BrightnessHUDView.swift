@@ -9,7 +9,7 @@ struct BrightnessHUDView: View {
             // Header with icon and label
             HStack {
                 Image(systemName: "sun.max.fill")
-                    .foregroundStyle(.blue)
+                    .foregroundStyle(.white)
                 Text("Global Brightness")
                     .font(.headline)
                 Spacer()
@@ -29,18 +29,18 @@ struct BrightnessHUDView: View {
 
                     // Progress fill
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(.blue)
+                        .fill(.white)
                         .frame(
                             width: geometry.size.width * CGFloat(brightness) / 100.0,
                             height: 6
                         )
+                        .animation(.linear, value: brightness)
                 }
             }
             .frame(height: 6)
         }
         .padding()
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
-        .shadow(color: .black.opacity(0.2), radius: 12, x: 0, y: 4)
+        .glassEffect(.clear, in: RoundedRectangle(cornerRadius: 24))
         .frame(width: 280)
     }
 }

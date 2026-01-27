@@ -22,15 +22,12 @@ class BrightnessHUDManager {
         // Show window with fade-in animation
         if !window.isVisible {
             window.alphaValue = 0.0
-            window.makeKeyAndOrderFront(nil)
+            window.orderFrontRegardless()
+        }
 
-            NSAnimationContext.runAnimationGroup { context in
-                context.duration = 0.2
-                window.animator().alphaValue = 1.0
-            }
-        } else {
-            // Already visible, just ensure it's at full opacity
-            window.alphaValue = 1.0
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.2
+            window.animator().alphaValue = 1.0
         }
 
         scheduleHide()
