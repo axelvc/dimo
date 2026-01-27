@@ -4,8 +4,6 @@ import SwiftUI
 /// Custom NSWindow for displaying the brightness HUD
 class BrightnessHUDWindow: NSWindow {
     init() {
-        // Create window with initial size
-        // Will be positioned below menu bar at top-right
         super.init(
             contentRect: NSRect(x: 0, y: 0, width: 280, height: 80),
             styleMask: [.borderless],
@@ -13,7 +11,6 @@ class BrightnessHUDWindow: NSWindow {
             defer: false
         )
 
-        // Window configuration
         self.isOpaque = false
         self.backgroundColor = .clear
         self.hasShadow = true
@@ -21,8 +18,35 @@ class BrightnessHUDWindow: NSWindow {
         self.collectionBehavior = [.canJoinAllSpaces, .stationary]
         self.ignoresMouseEvents = true  // Click-through
 
-        // Position at top-right, below menu bar
         positionWindow()
+    }
+
+    /// Updates window position (in case screen configuration changes)
+    func updatePosition(anchorFrame: NSRect? = nil) {
+        if let anchorFrame {
+            positionBelowMenuBarIcon(anchorFrame: anchorFrame)
+        } else {
+            positionWindow()
+        }
+    }
+
+    private func positionBelowMenuBarIcon(anchorFrame: NSRect) {
+        let gap: CGFloat = 8
+        let x = anchorFrame.midX - (frame.width / 2)
+        let y = anchorFrame.minY - gap - frame.height
+
+        let anchorPoint = NSPoint(x: anchorFrame.midX, y: anchorFrame.midY)
+        let screen = NSScreen.screens.first { $0.frame.contains(anchorPoint) } ?? NSScreen.main
+
+        guard let screen else {
+            setFrameOrigin(NSPoint(x: x, y: y))
+            return
+        }
+
+        let visibleFrame = screen.visibleFrame
+        let clampedX = min(max(x, visibleFrame.minX), visibleFrame.maxX - frame.width)
+        let clampedY = min(max(y, visibleFrame.minY), visibleFrame.maxY - frame.height)
+        setFrameOrigin(NSPoint(x: clampedX, y: clampedY))
     }
 
     /// Positions the window at top-right, below menu bar
@@ -38,11 +62,6 @@ class BrightnessHUDWindow: NSWindow {
         let x = screenFrame.maxX - frame.width - rightPadding
         let y = screenFrame.maxY - menuBarHeight - gap - frame.height
 
-        self.setFrameOrigin(NSPoint(x: x, y: y))
-    }
-
-    /// Updates window position (in case screen configuration changes)
-    func updatePosition() {
-        positionWindow()
+        setFrameOrigin(NSPoint(x: x, y: y))
     }
 }

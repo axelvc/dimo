@@ -7,7 +7,7 @@ class BrightnessHUDManager {
     private var hudWindow: BrightnessHUDWindow?
     private var hideTask: Task<Void, Never>?
 
-    func show(brightness: UInt16) {
+    func show(brightness: UInt16, anchorFrame: NSRect? = nil) {
         hideTask?.cancel()
 
         hudWindow = hudWindow ?? BrightnessHUDWindow()
@@ -17,7 +17,7 @@ class BrightnessHUDManager {
         window.contentView = NSHostingView(rootView: contentView)
 
         // Update position (in case screen config changed)
-        window.updatePosition()
+        window.updatePosition(anchorFrame: anchorFrame)
 
         // Show window with fade-in animation
         if !window.isVisible {

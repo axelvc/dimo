@@ -40,7 +40,8 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
         // Connect keyboard manager to HUD manager
         manager.onBrightnessChanged = { [weak self] brightness in
             Task { @MainActor in
-                self?.hudManager.show(brightness: brightness)
+                let anchorFrame = self?.menuBarButtonFrame()
+                self?.hudManager.show(brightness: brightness, anchorFrame: anchorFrame)
             }
         }
         return manager
@@ -65,5 +66,40 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
             keyboardManager.stopMonitoring()
             hudManager.cleanup()
         }
+    }
+
+    @MainActor
+    private func menuBarButtonFrame() -> NSRect? {
+        guard
+            let statusBarWindow = NSApp.windows.first(where: {
+                $0.className.contains("NSStatusBarWindow")
+            })
+        else {
+            return nil
+        }
+
+        guard let contentView = statusBarWindow.contentView,
+            let button = findStatusBarButton(in: contentView),
+            let buttonWindow = button.window
+        else {
+            return nil
+        }
+
+        return buttonWindow.convertToScreen(button.frame)
+    }
+
+    @MainActor
+    private func findStatusBarButton(in view: NSView) -> NSStatusBarButton? {
+        if let button = view as? NSStatusBarButton {
+            return button
+        }
+
+        for subview in view.subviews {
+            if let button = findStatusBarButton(in: subview) {
+                return button
+            }
+        }
+
+        return nil
     }
 }
