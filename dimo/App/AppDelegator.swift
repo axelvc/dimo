@@ -52,6 +52,7 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
     }()
 
     private var accessibilityObserver: NSObjectProtocol?
+    private var windowLifecycleObservers: [NSObjectProtocol] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Initialize services by accessing them
@@ -61,6 +62,11 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
 
         // Initialize keyboard shortcuts
         Task { @MainActor in
+            if !Self.isRunningInXcodePreviews {
+                installWindowLifecycleObservers()
+            }
+            updateDockVisibility()
+
             _ = hudManager
             if settingsStore.keyboardShortcutsEnabled {
                 keyboardManager.startMonitoring(promptForPermission: !Self.isRunningInXcodePreviews)
@@ -76,6 +82,13 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
         if let observer = accessibilityObserver {
             NotificationCenter.default.removeObserver(observer)
             accessibilityObserver = nil
+        }
+
+        if !windowLifecycleObservers.isEmpty {
+            for observer in windowLifecycleObservers {
+                NotificationCenter.default.removeObserver(observer)
+            }
+            windowLifecycleObservers.removeAll()
         }
 
         // Clean up keyboard monitoring
@@ -107,6 +120,78 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
                 }
             }
         }
+    }
+
+    @MainActor
+    private func installWindowLifecycleObservers() {
+        guard windowLifecycleObservers.isEmpty else {
+            return
+        }
+
+        let center = NotificationCenter.default
+        let names: [NSNotification.Name] = [
+            NSWindow.didBecomeKeyNotification,
+            NSWindow.didResignKeyNotification,
+            NSWindow.didMiniaturizeNotification,
+            NSWindow.didDeminiaturizeNotification,
+            NSWindow.willCloseNotification,
+        ]
+
+        windowLifecycleObservers = names.map { name in
+            center.addObserver(forName: name, object: nil, queue: .main) { [weak self] _ in
+                guard let self else {
+                    return
+                }
+
+                if name == NSWindow.willCloseNotification {
+                    DispatchQueue.main.async { [weak self] in
+                        guard let self else {
+                            return
+                        }
+
+                        Task { @MainActor in
+                            self.updateDockVisibility()
+                        }
+                    }
+                } else {
+                    Task { @MainActor in
+                        self.updateDockVisibility()
+                    }
+                }
+            }
+        }
+    }
+
+    @MainActor
+    private func updateDockVisibility() {
+        let hasUserFacingWindow = NSApp.windows.contains(where: windowCountsForDock)
+        let desiredPolicy: NSApplication.ActivationPolicy = hasUserFacingWindow ? .regular : .accessory
+        guard NSApp.activationPolicy() != desiredPolicy else {
+            return
+        }
+
+        _ = NSApp.setActivationPolicy(desiredPolicy)
+    }
+
+    @MainActor
+    private func windowCountsForDock(_ window: NSWindow) -> Bool {
+        if window.className.contains("NSStatusBarWindow") {
+            return false
+        }
+
+        if window is BrightnessHUDWindow {
+            return false
+        }
+
+        if window.level == .statusBar {
+            return false
+        }
+
+        if window.styleMask.contains(.borderless) && !window.styleMask.contains(.titled) {
+            return false
+        }
+
+        return window.isVisible || window.isMiniaturized
     }
 
     @MainActor
