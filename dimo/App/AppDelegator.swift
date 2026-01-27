@@ -47,6 +47,8 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
         return manager
     }()
 
+    private var accessibilityObserver: NSObjectProtocol?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         // Initialize services by accessing them
         _ = monitorController
@@ -56,15 +58,47 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
         // Initialize keyboard shortcuts
         Task { @MainActor in
             _ = hudManager
-            keyboardManager.startMonitoring()
+            if settingsStore.keyboardShortcutsEnabled {
+                keyboardManager.startMonitoring(promptForPermission: true)
+            }
+            registerAccessibilityObserver()
         }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        if let observer = accessibilityObserver {
+            NotificationCenter.default.removeObserver(observer)
+            accessibilityObserver = nil
+        }
+
         // Clean up keyboard monitoring
         Task { @MainActor in
             keyboardManager.stopMonitoring()
             hudManager.cleanup()
+        }
+    }
+
+    private func registerAccessibilityObserver() {
+        guard accessibilityObserver == nil else {
+            return
+        }
+
+        accessibilityObserver = NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            guard let self else {
+                return
+            }
+
+            Task { @MainActor in
+                if self.settingsStore.keyboardShortcutsEnabled {
+                    self.keyboardManager.startMonitoring(promptForPermission: false)
+                } else {
+                    self.keyboardManager.stopMonitoring()
+                }
+            }
         }
     }
 

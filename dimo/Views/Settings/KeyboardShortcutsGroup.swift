@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct KeyboardShortcutsGroup: View {
+    @Environment(\.keyboardShortcutManager) private var keyboardShortcutManager
     @Bindable var viewModel: SettingsViewModel
 
     var body: some View {
@@ -47,7 +48,14 @@ struct KeyboardShortcutsGroup: View {
     private var keyboardShortcutsEnabledBinding: Binding<Bool> {
         Binding(
             get: { viewModel.keyboardShortcutsEnabled },
-            set: { viewModel.setKeyboardShortcutsEnabled($0) }
+            set: { isEnabled in
+                viewModel.setKeyboardShortcutsEnabled(isEnabled)
+                if isEnabled {
+                    keyboardShortcutManager.startMonitoring(promptForPermission: true)
+                } else {
+                    keyboardShortcutManager.stopMonitoring()
+                }
+            }
         )
     }
 

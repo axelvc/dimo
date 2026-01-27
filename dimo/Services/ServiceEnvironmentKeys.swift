@@ -32,6 +32,21 @@ struct SettingsStoreKey: EnvironmentKey {
     }()
 }
 
+struct KeyboardShortcutManagerKey: EnvironmentKey {
+    @MainActor
+    static let defaultValue: any KeyboardShortcutManaging = {
+        #if DEBUG
+            KeyboardShortcutManager(
+                settingsStore: MockSettingsStore(),
+                monitorController: MockMonitorController()
+            )
+        #else
+            fatalError(
+                "KeyboardShortcutManager not provided in environment. Inject it from AppDelegator.")
+        #endif
+    }()
+}
+
 struct BrightnessSchedulerKey: EnvironmentKey {
     static let defaultValue: any BrightnessScheduling = {
         #if DEBUG
@@ -54,6 +69,11 @@ extension EnvironmentValues {
     var settingsStore: any SettingsStoring {
         get { self[SettingsStoreKey.self] }
         set { self[SettingsStoreKey.self] = newValue }
+    }
+
+    var keyboardShortcutManager: any KeyboardShortcutManaging {
+        get { self[KeyboardShortcutManagerKey.self] }
+        set { self[KeyboardShortcutManagerKey.self] = newValue }
     }
 
     var brightnessScheduler: any BrightnessScheduling {

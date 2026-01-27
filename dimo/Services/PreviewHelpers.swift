@@ -95,10 +95,18 @@
     extension View {
         @MainActor
         func previewEnvironment() -> some View {
-            self
-                .environment(\.monitorController, MockMonitorController())
-                .environment(\.settingsStore, MockSettingsStore())
+            let monitorController = MockMonitorController()
+            let settingsStore = MockSettingsStore()
+            let keyboardShortcutManager = KeyboardShortcutManager(
+                settingsStore: settingsStore,
+                monitorController: monitorController
+            )
+
+            return self
+                .environment(\.monitorController, monitorController)
+                .environment(\.settingsStore, settingsStore)
                 .environment(\.brightnessScheduler, MockBrightnessScheduler())
+                .environment(\.keyboardShortcutManager, keyboardShortcutManager)
         }
     }
 #endif

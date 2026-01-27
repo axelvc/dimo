@@ -16,6 +16,7 @@ struct dimoApp: App {
             MenuBarView()
                 .environment(\.monitorController, appDelegate.monitorController)
                 .environment(\.settingsStore, appDelegate.settingsStore)
+                .environment(\.keyboardShortcutManager, appDelegate.keyboardManager)
         }
         .menuBarExtraStyle(.window)
 
@@ -23,6 +24,7 @@ struct dimoApp: App {
             SettingsView()
                 .environment(\.settingsStore, appDelegate.settingsStore)
                 .environment(\.brightnessScheduler, appDelegate.brightnessScheduler)
+                .environment(\.keyboardShortcutManager, appDelegate.keyboardManager)
         }
     }
 }

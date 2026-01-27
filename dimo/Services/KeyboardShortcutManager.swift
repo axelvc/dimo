@@ -3,7 +3,13 @@ import Cocoa
 import SwiftUI
 
 @MainActor
-class KeyboardShortcutManager {
+protocol KeyboardShortcutManaging: AnyObject {
+    func startMonitoring(promptForPermission: Bool)
+    func stopMonitoring()
+}
+
+@MainActor
+class KeyboardShortcutManager: KeyboardShortcutManaging {
     private let settingsStore: any SettingsStoring
     private let monitorController: any MonitorControlling
     private var eventTap: CFMachPort?
@@ -47,10 +53,10 @@ class KeyboardShortcutManager {
         self.monitorController = monitorController
     }
 
-    func startMonitoring() {
+    func startMonitoring(promptForPermission: Bool = false) {
         stopMonitoring()
 
-        guard checkAccessibilityPermissions() else {
+        guard checkAccessibilityPermissions(promptForPermission: promptForPermission) else {
             print("⚠️ Accessibility permissions not granted. Keyboard shortcuts will not work.")
             return
         }
@@ -112,12 +118,16 @@ class KeyboardShortcutManager {
         }
     }
 
-    private func checkAccessibilityPermissions() -> Bool {
-        let options: NSDictionary = [
-            kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true
-        ]
+    private func checkAccessibilityPermissions(promptForPermission: Bool) -> Bool {
+        if promptForPermission {
+            let options: NSDictionary = [
+                kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true
+            ]
 
-        return AXIsProcessTrustedWithOptions(options)
+            return AXIsProcessTrustedWithOptions(options)
+        }
+
+        return AXIsProcessTrusted()
     }
 
     private func handleCGEvent(type: CGEventType, event: CGEvent) {
