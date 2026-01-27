@@ -55,6 +55,9 @@ final class SettingsViewModel {
     }
 
     func setNotifyOnSchedule(_ isEnabled: Bool) {
+        if isEnabled {
+            ScheduleBrightnessNotification.requestAuthorizationIfNeeded()
+        }
         settingsStore.setNotifyOnSchedule(isEnabled)
     }
 

@@ -100,5 +100,14 @@ final class BrightnessScheduler: BrightnessScheduling {
 
     private func executeBrightnessChange(_ schedule: BrightnessSchedule) {
         monitorController.setBrightness(schedule.percent)
+
+        guard settingsStore.notifyOnSchedule else {
+            return
+        }
+
+        ScheduleBrightnessNotification.postScheduledBrightnessChanged(
+            percent: schedule.percent,
+            scheduledTime: schedule.time
+        )
     }
 }

@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import UserNotifications
 
 final class AppDelegator: NSObject, NSApplicationDelegate {
     private static var isRunningInXcodePreviews: Bool {
@@ -55,10 +56,16 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
     private var windowLifecycleObservers: [NSObjectProtocol] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        UNUserNotificationCenter.current().delegate = self
+
         // Initialize services by accessing them
         _ = monitorController
         _ = settingsStore
         _ = brightnessScheduler
+
+        if settingsStore.notifyOnSchedule && !Self.isRunningInXcodePreviews {
+            ScheduleBrightnessNotification.requestAuthorizationIfNeeded()
+        }
 
         // Initialize keyboard shortcuts
         Task { @MainActor in
@@ -227,5 +234,15 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
         }
 
         return nil
+    }
+}
+
+extension AppDelegator: UNUserNotificationCenterDelegate {
+    func userNotificationCenter(
+        _ center: UNUserNotificationCenter,
+        willPresent notification: UNNotification,
+        withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
+    ) {
+        completionHandler([.banner, .sound])
     }
 }
