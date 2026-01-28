@@ -1,12 +1,12 @@
 import AppKit
 import SwiftUI
 
-/// Custom NSWindow for displaying the brightness HUD
-class BrightnessHUDWindow: NSWindow {
+/// Custom panel for displaying the brightness HUD
+class BrightnessHUDWindow: NSPanel {
     init() {
         super.init(
-            contentRect: NSRect(x: 0, y: 0, width: 280, height: 80),
-            styleMask: [.borderless],
+            contentRect: NSRect(x: 0, y: 0, width: 280, height: 96),
+            styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
         )
@@ -16,9 +16,20 @@ class BrightnessHUDWindow: NSWindow {
         self.hasShadow = false
         self.level = .statusBar  // Float above normal windows
         self.collectionBehavior = [.canJoinAllSpaces, .stationary]
-        self.ignoresMouseEvents = true  // Click-through
+        self.hidesOnDeactivate = false
+        self.becomesKeyOnlyIfNeeded = true
+        self.acceptsMouseMovedEvents = true
+        self.ignoresMouseEvents = false
 
         positionWindow()
+    }
+
+    override var canBecomeKey: Bool {
+        true
+    }
+
+    override var canBecomeMain: Bool {
+        false
     }
 
     /// Updates window position (in case screen configuration changes)

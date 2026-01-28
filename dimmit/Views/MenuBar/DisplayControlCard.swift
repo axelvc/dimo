@@ -21,8 +21,6 @@ struct DisplayControlCard: View {
         VStack(alignment: .leading, spacing: 12) {
             // Display name
             HStack {
-                Image(systemName: "display")
-                    .foregroundStyle(.blue)
                 Text(display.name)
                     .font(.headline)
                 Spacer()
@@ -36,7 +34,7 @@ struct DisplayControlCard: View {
             HStack {
                 Button("Sub", systemImage: "sun.min.fill") {
                     sliderValue = max(0, sliderValue - 1)
-                    onBrightnessChange(UInt16(sliderValue))
+                    sendBrightness()
                 }
                 .labelStyle(.iconOnly)
                 .buttonStyle(.borderless)
@@ -47,13 +45,13 @@ struct DisplayControlCard: View {
                 ) { editing in
                     isDragging = editing
                     if !editing {
-                        onBrightnessChange(UInt16(sliderValue))
+                        sendBrightness()
                     }
                 }
 
                 Button("Add", systemImage: "sun.max.fill") {
                     sliderValue = min(100, sliderValue + 1)
-                    onBrightnessChange(UInt16(sliderValue))
+                    sendBrightness()
                 }
                 .labelStyle(.iconOnly)
                 .buttonStyle(.borderless)
@@ -66,7 +64,7 @@ struct DisplayControlCard: View {
                             withAnimation {
                                 sliderValue = Double(preset)
                             }
-                            onBrightnessChange(UInt16(preset))
+                            sendBrightness()
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
@@ -84,5 +82,9 @@ struct DisplayControlCard: View {
                 sliderValue = Double(newValue)
             }
         }
+    }
+
+    private func sendBrightness() {
+        onBrightnessChange(UInt16(sliderValue))
     }
 }

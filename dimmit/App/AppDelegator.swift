@@ -46,7 +46,15 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
         manager.onBrightnessChanged = { [weak self] brightness in
             Task { @MainActor in
                 let anchorFrame = self?.menuBarButtonFrame()
-                self?.hudManager.show(brightness: brightness, anchorFrame: anchorFrame)
+                self?.hudManager.show(
+                    brightness: brightness,
+                    anchorFrame: anchorFrame,
+                    setBrightness: { [weak self] newBrightness in
+                        Task { @MainActor in
+                            self?.monitorController.setBrightness(newBrightness)
+                        }
+                    }
+                )
             }
         }
         return manager

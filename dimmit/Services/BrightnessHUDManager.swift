@@ -6,14 +6,38 @@ import SwiftUI
 class BrightnessHUDManager {
     private var hudWindow: BrightnessHUDWindow?
     private var hideTask: Task<Void, Never>?
+    private var isHovering: Bool = false
 
-    func show(brightness: UInt16, anchorFrame: NSRect? = nil) {
+    func show(
+        brightness: UInt16,
+        anchorFrame: NSRect? = nil,
+        setBrightness: @escaping (UInt16) -> Void
+    ) {
         hideTask?.cancel()
 
         hudWindow = hudWindow ?? BrightnessHUDWindow()
         guard let window = hudWindow else { return }
 
-        let contentView = BrightnessHUDView(brightness: brightness)
+        let contentView = BrightnessHUDView(
+            brightness: brightness,
+            onBrightnessChange: { [weak self] newBrightness in
+                guard let self else {
+                    return
+                }
+                setBrightness(newBrightness)
+                self.hideTask?.cancel()
+            },
+            onHoverChange: { [weak self] hovering in
+                self?.setHovering(hovering)
+            },
+            onClose: { [weak self] in
+                guard let self else {
+                    return
+                }
+                self.hideTask?.cancel()
+                self.hide()
+            }
+        )
         window.contentView = NSHostingView(rootView: contentView)
 
         // Update position (in case screen config changed)
@@ -47,7 +71,10 @@ class BrightnessHUDManager {
         )
     }
 
-    private func scheduleHide(after seconds: TimeInterval = 2) {
+    private func scheduleHide(after seconds: TimeInterval = 1) {
+        guard !isHovering else {
+            return
+        }
         hideTask?.cancel()
         hideTask = Task {
             try? await Task.sleep(for: .seconds(seconds))
@@ -56,6 +83,15 @@ class BrightnessHUDManager {
             if !Task.isCancelled {
                 self.hide()
             }
+        }
+    }
+
+    private func setHovering(_ hovering: Bool) {
+        isHovering = hovering
+        if hovering {
+            hideTask?.cancel()
+        } else {
+            scheduleHide()
         }
     }
 

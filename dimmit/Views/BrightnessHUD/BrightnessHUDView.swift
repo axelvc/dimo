@@ -3,48 +3,75 @@ import SwiftUI
 /// HUD view that displays current brightness level
 struct BrightnessHUDView: View {
     let brightness: UInt16
+    let onBrightnessChange: (UInt16) -> Void
+    let onHoverChange: (Bool) -> Void
+    let onClose: () -> Void
+
+    @State private var display: MonitorInfo
+    @State private var isHovering: Bool = false
+
+    init(
+        brightness: UInt16,
+        onBrightnessChange: @escaping (UInt16) -> Void,
+        onHoverChange: @escaping (Bool) -> Void,
+        onClose: @escaping () -> Void
+    ) {
+        self.brightness = brightness
+        self.onBrightnessChange = onBrightnessChange
+        self.onHoverChange = onHoverChange
+        self.onClose = onClose
+        _display = State(
+            initialValue: MonitorInfo(
+                id: "global",
+                name: "Brightnesss",
+                brightness: brightness
+            )
+        )
+    }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Header with icon and label
-            HStack {
-                Image(systemName: "sun.max.fill")
-                    .foregroundStyle(.white)
-                Text("Global Brightness")
-                    .font(.headline)
-                Spacer()
-                Text("\(Int(brightness))%")
-                    .font(.system(.body, design: .monospaced))
-                    .foregroundStyle(.secondary)
-                    .contentTransition(.numericText())
+        DisplayControlCard(
+            display: display,
+            showPresetBar: false,
+            onBrightnessChange: { newBrightness in
+                display.brightness = newBrightness
+                onBrightnessChange(newBrightness)
             }
-
-            // Progress bar (non-interactive)
-            GeometryReader { geometry in
-                ZStack(alignment: .leading) {
-                    // Background track
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(.tertiary)
-                        .frame(height: 6)
-
-                    // Progress fill
-                    RoundedRectangle(cornerRadius: 4)
-                        .fill(.white)
-                        .frame(
-                            width: geometry.size.width * CGFloat(brightness) / 100.0,
-                            height: 6
-                        )
-                        .animation(.linear, value: brightness)
-                }
-            }
-            .frame(height: 6)
-        }
-        .padding()
+        )
         .glassEffect(.clear, in: RoundedRectangle(cornerRadius: 24))
         .frame(width: 280)
+        .overlay(alignment: .topLeading) {
+            if isHovering {
+                Button(action: onClose) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 8, weight: .bold))
+                        .foregroundStyle(.white)
+                        .padding(5)
+                        .glassEffect()
+                }
+                .buttonStyle(.plain)
+                .padding(8)
+                .transition(.opacity.combined(with: .scale(scale: 0.9)))
+                .offset(x: -12, y: -12)
+            }
+        }
+        .onHover { hovering in
+            withAnimation(.easeOut(duration: 0.12)) {
+                isHovering = hovering
+            }
+            onHoverChange(hovering)
+        }
+        .onChange(of: brightness) { _, newValue in
+            display.brightness = newValue
+        }
     }
 }
 
 #Preview(traits: .sizeThatFitsLayout) {
-    BrightnessHUDView(brightness: 50)
+    BrightnessHUDView(
+        brightness: 50,
+        onBrightnessChange: { _ in },
+        onHoverChange: { _ in },
+        onClose: {}
+    )
 }
