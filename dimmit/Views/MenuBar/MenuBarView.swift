@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 struct MenuBarView: View {
     @Environment(\.monitorController) private var monitorController
@@ -55,7 +56,10 @@ private struct MenuBarContentView: View {
 
             Divider()
 
-            Button(action: { openSettings() }) {
+            Button(action: {
+                openSettings()
+                NSApp.activate()
+            }) {
                 Text("Settings...")
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
