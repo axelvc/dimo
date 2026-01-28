@@ -92,7 +92,7 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
             let eventTap = CGEvent.tapCreate(
                 tap: .cgSessionEventTap,
                 place: .headInsertEventTap,
-                options: .defaultTap,
+                options: .listenOnly,
                 eventsOfInterest: CGEventMask(eventMask),
                 callback: { (proxy, type, event, refcon) -> Unmanaged<CGEvent>? in
                     // Get the KeyboardShortcutManager instance
@@ -105,7 +105,7 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
                     }
 
                     // Pass through the event
-                    return Unmanaged.passRetained(event)
+                    return Unmanaged.passUnretained(event)
                 },
                 userInfo: Unmanaged.passUnretained(self).toOpaque()
             )
