@@ -1,9 +1,8 @@
-import AppKit
 import Cocoa
-import SwiftUI
 
 @MainActor
 protocol KeyboardShortcutManaging: AnyObject {
+    var isMonitoring: Bool { get }
     func startMonitoring(promptForPermission: Bool)
     func stopMonitoring()
 }
@@ -14,6 +13,11 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
     private let monitorController: any MonitorControlling
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
+
+    private var didWarnAboutMissingAccessibilityPermission = true
+
+    private static let accessibilityPermissionRetryIntervalMS: UInt64 = 2_000
+    private var accessibilityPermissionRetryTask: Task<Void, Never>?
 
     private static let pendingBrightnessFeedbackIntervalMS: UInt64 = 50
     private var pendingBrightnessFeedbackTask: Task<Void, Never>?
@@ -45,6 +49,10 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
 
     var onBrightnessChanged: ((UInt16) -> Void)?
 
+    var isMonitoring: Bool {
+        eventTap != nil
+    }
+
     init(
         settingsStore: any SettingsStoring,
         monitorController: any MonitorControlling
@@ -54,12 +62,28 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
     }
 
     func startMonitoring(promptForPermission: Bool = false) {
-        stopMonitoring()
-
-        guard checkAccessibilityPermissions(promptForPermission: promptForPermission) else {
-            print("⚠️ Accessibility permissions not granted. Keyboard shortcuts will not work.")
+        guard settingsStore.keyboardShortcutsEnabled else {
+            stopMonitoring()
             return
         }
+
+        guard !isMonitoring else {
+            stopAccessibilityPermissionRetryLoop()
+            return
+        }
+
+        guard checkAccessibilityPermissions(promptForPermission: promptForPermission) else {
+            if didWarnAboutMissingAccessibilityPermission {
+                print("⚠️ Accessibility permissions not granted. Keyboard shortcuts will not work.")
+                didWarnAboutMissingAccessibilityPermission = false
+            }
+
+            startAccessibilityPermissionRetryLoop()
+            return
+        }
+
+        didWarnAboutMissingAccessibilityPermission = true
+        stopAccessibilityPermissionRetryLoop()
 
         // Create event tap
         let eventMask = (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue)
@@ -103,19 +127,62 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
     }
 
     func stopMonitoring() {
+        let hadResources = (eventTap != nil || runLoopSource != nil)
         stopPendingBrightnessFeedback()
+        stopAccessibilityPermissionRetryLoop()
 
         if let eventTap = eventTap {
             CGEvent.tapEnable(tap: eventTap, enable: false)
-
-            if let runLoopSource = runLoopSource {
-                CFRunLoopRemoveSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
-                self.runLoopSource = nil
-            }
-
             self.eventTap = nil
+        }
+
+        if let runLoopSource = runLoopSource {
+            CFRunLoopRemoveSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
+            self.runLoopSource = nil
+        }
+
+        if hadResources {
             print("✓ Keyboard shortcut monitoring stopped")
         }
+    }
+
+    private func startAccessibilityPermissionRetryLoop() {
+        guard accessibilityPermissionRetryTask == nil else {
+            return
+        }
+
+        accessibilityPermissionRetryTask = Task { @MainActor [weak self] in
+            guard let self else {
+                return
+            }
+
+            while !Task.isCancelled {
+                guard self.settingsStore.keyboardShortcutsEnabled else {
+                    break
+                }
+
+                guard !self.isMonitoring else {
+                    break
+                }
+
+                if self.checkAccessibilityPermissions(promptForPermission: false) {
+                    self.startMonitoring(promptForPermission: false)
+                }
+
+                do {
+                    try await Task.sleep(for: .milliseconds(Self.accessibilityPermissionRetryIntervalMS))
+                } catch {
+                    break
+                }
+            }
+
+            self.accessibilityPermissionRetryTask = nil
+        }
+    }
+
+    private func stopAccessibilityPermissionRetryLoop() {
+        accessibilityPermissionRetryTask?.cancel()
+        accessibilityPermissionRetryTask = nil
     }
 
     private static var isRunningInXcodePreviews: Bool {
@@ -148,7 +215,8 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
     }
 
     private func currentBrightnessValue() -> UInt16 {
-        pendingBrightness ?? lastBrightnessTarget ?? (monitorController.monitors.first?.brightness ?? 50)
+        pendingBrightness ?? lastBrightnessTarget
+            ?? (monitorController.monitors.first?.brightness ?? 50)
     }
 
     private func handleKeyDown(_ event: CGEvent) {
@@ -240,7 +308,8 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
                 self.applyPendingBrightnessIfNeeded()
 
                 do {
-                    try await Task.sleep(for: .milliseconds(Self.pendingBrightnessFeedbackIntervalMS))
+                    try await Task.sleep(
+                        for: .milliseconds(Self.pendingBrightnessFeedbackIntervalMS))
                 } catch {
                     break
                 }

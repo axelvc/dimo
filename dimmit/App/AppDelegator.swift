@@ -60,7 +60,6 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
         return manager
     }()
 
-    private var accessibilityObserver: NSObjectProtocol?
     private var windowLifecycleObservers: [NSObjectProtocol] = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -83,22 +82,16 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
             updateDockVisibility()
 
             _ = hudManager
-            if settingsStore.keyboardShortcutsEnabled {
-                keyboardManager.startMonitoring(promptForPermission: !Self.isRunningInXcodePreviews)
-            }
 
-            if !Self.isRunningInXcodePreviews {
-                registerAccessibilityObserver()
+            if self.settingsStore.keyboardShortcutsEnabled {
+                self.keyboardManager.startMonitoring(promptForPermission: true)
+            } else {
+                self.keyboardManager.stopMonitoring()
             }
         }
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        if let observer = accessibilityObserver {
-            NotificationCenter.default.removeObserver(observer)
-            accessibilityObserver = nil
-        }
-
         if !windowLifecycleObservers.isEmpty {
             for observer in windowLifecycleObservers {
                 NotificationCenter.default.removeObserver(observer)
@@ -110,30 +103,6 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
         Task { @MainActor in
             keyboardManager.stopMonitoring()
             hudManager.cleanup()
-        }
-    }
-
-    private func registerAccessibilityObserver() {
-        guard accessibilityObserver == nil else {
-            return
-        }
-
-        accessibilityObserver = NotificationCenter.default.addObserver(
-            forName: NSApplication.didBecomeActiveNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            guard let self else {
-                return
-            }
-
-            Task { @MainActor in
-                if self.settingsStore.keyboardShortcutsEnabled {
-                    self.keyboardManager.startMonitoring(promptForPermission: false)
-                } else {
-                    self.keyboardManager.stopMonitoring()
-                }
-            }
         }
     }
 
