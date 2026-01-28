@@ -1,4 +1,4 @@
-# Dimo
+# Dimmit
 
 > Work in progress.
 
@@ -20,8 +20,8 @@ Menu bar app for controlling external display brightness on macOS.
 
 ## Getting Started
 
-1. Open `dimo.xcodeproj` in Xcode.
-2. Select the `dimo` scheme.
+1. Open `dimmit.xcodeproj` in Xcode.
+2. Select the `dimmit` scheme.
 3. Build + Run.
 
 On first use, if you enable keyboard shortcuts you may be prompted to grant Accessibility permission.
@@ -43,19 +43,19 @@ Build and copy artifacts into the app:
 
 This script produces:
 
-- `dimo/Libraries/libddc_handler.a`
-- `dimo/Libraries/include/ddc_handler.h`
+- `dimmit/Libraries/libddc_handler.a`
+- `dimmit/Libraries/include/ddc_handler.h`
 
 Note: the script currently builds for `aarch64-apple-darwin`. If you're on Intel, update the target (and any Xcode build settings) accordingly.
 
 ## Troubleshooting
 
-- Keyboard shortcuts do nothing: grant Accessibility permission to Dimo in System Settings -> Privacy & Security -> Accessibility.
+- Keyboard shortcuts do nothing: grant Accessibility permission to Dimmit in System Settings -> Privacy & Security -> Accessibility.
 - No external displays found: ensure your monitor + connection path supports DDC/CI (some docks/adapters block DDC).
 
 ## Repository Layout
 
-- `dimo/`: macOS app (Swift/SwiftUI)
+- `dimmit/`: macOS app (Swift/SwiftUI)
 - `ddc_handler/`: Rust static library + C header generation
 - `scripts/`: helper scripts (e.g. build Rust library)
 

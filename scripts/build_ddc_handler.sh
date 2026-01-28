@@ -3,7 +3,7 @@ set -e
 
 PROJECT_DIR="${PROJECT_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 RUST_DIR="$PROJECT_DIR/ddc_handler"
-LIBRARIES_DIR="$PROJECT_DIR/dimo/Libraries"
+LIBRARIES_DIR="$PROJECT_DIR/dimmit/Libraries"
 CBINDGEN="$HOME/.local/share/cargo/bin/cbindgen"
 
 echo "Building ddc_handler (Release)..."
