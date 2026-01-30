@@ -83,6 +83,15 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
         return false
     }
 
+    @MainActor var openSettings: (() -> Void)?
+
+    func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows: Bool)
+        -> Bool
+    {
+        openSettings?()
+        return true
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         if !windowLifecycleObservers.isEmpty {
             for observer in windowLifecycleObservers {
