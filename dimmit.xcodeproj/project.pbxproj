@@ -18,9 +18,22 @@
 		00F598582F1CC47E00966CCA /* Dimmit.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Dimmit.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		00D4791F2F2C2DFB00C98241 /* Exceptions for "dimmit" folder in "Dimmit" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 00F598572F1CC47E00966CCA /* Dimmit */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		00F5985A2F1CC47E00966CCA /* dimmit */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				00D4791F2F2C2DFB00C98241 /* Exceptions for "dimmit" folder in "Dimmit" target */,
+			);
 			path = dimmit;
 			sourceTree = "<group>";
 		};
