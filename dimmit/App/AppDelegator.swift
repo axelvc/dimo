@@ -150,8 +150,13 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
     @MainActor
     private func updateDockVisibility() {
         let hasUserFacingWindow = NSApp.windows.contains(where: windowCountsForDock)
-        let desiredPolicy: NSApplication.ActivationPolicy =
-            hasUserFacingWindow ? .regular : .accessory
+
+        #if DEBUG
+            let desiredPolicy: NSApplication.ActivationPolicy = .regular
+        #else
+            let desiredPolicy: NSApplication.ActivationPolicy =
+                hasUserFacingWindow ? .regular : .accessory
+        #endif
 
         guard NSApp.activationPolicy() != desiredPolicy else {
             return
