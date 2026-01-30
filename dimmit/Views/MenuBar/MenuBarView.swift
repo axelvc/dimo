@@ -66,6 +66,18 @@ private struct MenuBarContentView: View {
             .buttonStyle(.accessoryBar)
             .cornerRadius(.infinity)
             .padding(4)
+
+            Divider()
+
+            Button(action: {
+                NSApp.terminate(nil)
+            }) {
+                Text("Quit Dimmit")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.accessoryBar)
+            .cornerRadius(.infinity)
+            .padding(4)
         }
     }
 
