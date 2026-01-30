@@ -2,6 +2,8 @@
 
 Menu bar app for controlling external display brightness on macOS.
 
+https://github.com/user-attachments/assets/1209a8ab-e982-4282-a6e9-5dd79559c046
+
 ## Features
 
 - Per-monitor brightness controls from the menu bar
