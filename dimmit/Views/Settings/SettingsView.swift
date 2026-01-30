@@ -57,5 +57,4 @@ private struct SettingsContentView: View {
 
 #Preview {
     SettingsView()
-        .previewEnvironment()
 }

@@ -107,6 +107,5 @@ private struct MenuBarContentView: View {
 
 #Preview {
     MenuBarView()
-        .previewEnvironment()
         .frame(width: 350)
 }

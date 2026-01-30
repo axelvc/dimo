@@ -13,37 +13,30 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
         ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
     }
 
-    // Service instances - created once at app launch
-    @MainActor
-    private(set) lazy var monitorController: MonitorController = {
-        MonitorController()
-    }()
+    private(set) var settingsStore: SettingsStore
+    private(set) var monitorController: MonitorController
+    private(set) var brightnessScheduler: BrightnessScheduler
+    private(set) var keyboardManager: KeyboardShortcutManager
 
-    @MainActor
-    private(set) lazy var settingsStore: SettingsStore = {
-        SettingsStore()
-    }()
+    private(set) var hudManager: BrightnessHUDManager = BrightnessHUDManager()
+    private var windowLifecycleObservers: [NSObjectProtocol] = []
 
-    private(set) lazy var brightnessScheduler: BrightnessScheduler = {
-        BrightnessScheduler(
+    override init() {
+        settingsStore = SettingsStore()
+        monitorController = MonitorController()
+        brightnessScheduler = BrightnessScheduler(
             settingsStore: settingsStore,
             monitorController: monitorController
         )
-    }()
-
-    @MainActor
-    private(set) lazy var hudManager: BrightnessHUDManager = {
-        BrightnessHUDManager()
-    }()
-
-    @MainActor
-    private(set) lazy var keyboardManager: KeyboardShortcutManager = {
-        let manager = KeyboardShortcutManager(
+        keyboardManager = KeyboardShortcutManager(
             settingsStore: settingsStore,
             monitorController: monitorController
         )
+
+        super.init()
+
         // Connect keyboard manager to HUD manager
-        manager.onBrightnessChanged = { [weak self] brightness in
+        keyboardManager.onBrightnessChanged = { [weak self] brightness in
             Task { @MainActor in
                 let anchorFrame = self?.menuBarButtonFrame()
                 self?.hudManager.show(
@@ -57,10 +50,7 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
                 )
             }
         }
-        return manager
-    }()
-
-    private var windowLifecycleObservers: [NSObjectProtocol] = []
+    }
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         UNUserNotificationCenter.current().delegate = self
@@ -80,8 +70,6 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
                 installWindowLifecycleObservers()
             }
             updateDockVisibility()
-
-            _ = hudManager
 
             if self.settingsStore.keyboardShortcutsEnabled {
                 self.keyboardManager.startMonitoring(promptForPermission: true)

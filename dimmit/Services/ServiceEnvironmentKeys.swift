@@ -10,52 +10,19 @@ import SwiftUI
 // MARK: - Environment Keys
 
 struct MonitorControllerKey: EnvironmentKey {
-    @MainActor
-    static let defaultValue: any MonitorControlling = {
-        #if DEBUG
-            MockMonitorController()
-        #else
-            fatalError(
-                "MonitorController not provided in environment. Inject it from AppDelegator.")
-        #endif
-    }()
+    static let defaultValue: MonitorControlling = MockMonitorController()
 }
 
 struct SettingsStoreKey: EnvironmentKey {
-    @MainActor
-    static let defaultValue: any SettingsStoring = {
-        #if DEBUG
-            MockSettingsStore()
-        #else
-            fatalError("SettingsStore not provided in environment. Inject it from AppDelegator.")
-        #endif
-    }()
+    static let defaultValue: SettingsStoring = MockSettingsStore()
 }
 
 struct KeyboardShortcutManagerKey: EnvironmentKey {
-    @MainActor
-    static let defaultValue: any KeyboardShortcutManaging = {
-        #if DEBUG
-            KeyboardShortcutManager(
-                settingsStore: MockSettingsStore(),
-                monitorController: MockMonitorController()
-            )
-        #else
-            fatalError(
-                "KeyboardShortcutManager not provided in environment. Inject it from AppDelegator.")
-        #endif
-    }()
+    static let defaultValue: KeyboardShortcutManaging = MockKeyboardShortcutManager()
 }
 
 struct BrightnessSchedulerKey: EnvironmentKey {
-    static let defaultValue: any BrightnessScheduling = {
-        #if DEBUG
-            MockBrightnessScheduler()
-        #else
-            fatalError(
-                "BrightnessScheduler not provided in environment. Inject it from AppDelegator.")
-        #endif
-    }()
+    static let defaultValue: BrightnessScheduling = MockBrightnessScheduler()
 }
 
 // MARK: - Environment Values Extension
