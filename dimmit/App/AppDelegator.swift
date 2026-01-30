@@ -188,6 +188,10 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
 
     @MainActor
     private func menuBarButtonFrame() -> NSRect? {
+        guard settingsStore.showMenuBarIcon else {
+            return nil
+        }
+
         guard
             let statusBarWindow = NSApp.windows.first(where: {
                 $0.className.contains("NSStatusBarWindow")
