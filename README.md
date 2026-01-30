@@ -1,7 +1,5 @@
 # Dimmit
 
-> Work in progress.
-
 Menu bar app for controlling external display brightness on macOS.
 
 ## Features
@@ -10,15 +8,39 @@ Menu bar app for controlling external display brightness on macOS.
 - Optional brightness presets bar
 - Daily brightness schedules
 - Global keyboard shortcuts (brightness up/down) with configurable step size
-- Optional on-screen brightness HUD
 - Launch at login
 
-## Requirements
+## Project Status / Disclaimer
+
+This project is **not fully tested** and may **not work correctly in all scenarios**, hardware setups, or macOS versions.
+
+Dimmit has only been tested on the author's personal Mac and external monitor configuration. Different monitors, adapters, docks, or macOS versions may behave differently or not work at all.
+
+## Security / Code Signing
+
+This app is **not signed with a paid Apple Developer account**.
+
+When you first run Dimmit, macOS may block it. To allow it to run:
+
+1. Open **System Settings → Privacy & Security**
+2. Scroll to **Security**
+3. Click **Open Anyway** next to Dimmit
+
+You may also see warnings about an unidentified developer. This is expected for locally built or unsigned apps.
+
+## Troubleshooting
+
+- Keyboard shortcuts do nothing: grant Accessibility permission to Dimmit in System Settings -> Privacy & Security -> Accessibility.
+- No external displays found: ensure your monitor + connection path supports DDC/CI (some docks/adapters block DDC).
+
+## Development
+
+### Requirements
 
 - macOS (built with Xcode / SwiftUI)
 - External monitor(s) that support DDC/CI brightness control
 
-## Getting Started
+### Getting Started
 
 1. Open `dimmit.xcodeproj` in Xcode.
 2. Select the `dimmit` scheme.
@@ -26,7 +48,7 @@ Menu bar app for controlling external display brightness on macOS.
 
 On first use, if you enable keyboard shortcuts you may be prompted to grant Accessibility permission.
 
-## Rebuilding the DDC Handler (Rust)
+### Rebuilding the DDC Handler (Rust)
 
 The Swift app calls into a small Rust static library (`ddc_handler`) via a C header.
 
@@ -48,17 +70,8 @@ This script produces:
 
 Note: the script currently builds for `aarch64-apple-darwin`. If you're on Intel, update the target (and any Xcode build settings) accordingly.
 
-## Troubleshooting
-
-- Keyboard shortcuts do nothing: grant Accessibility permission to Dimmit in System Settings -> Privacy & Security -> Accessibility.
-- No external displays found: ensure your monitor + connection path supports DDC/CI (some docks/adapters block DDC).
-
-## Repository Layout
+### Repository Layout
 
 - `dimmit/`: macOS app (Swift/SwiftUI)
 - `ddc_handler/`: Rust static library + C header generation
 - `scripts/`: helper scripts (e.g. build Rust library)
-
-## License
-
-No license file is currently included in this repository.
