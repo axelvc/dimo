@@ -44,6 +44,7 @@ private struct SettingsContentView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
                 GeneralSettingsGroup(viewModel: viewModel)
+                MenuBarSettingsGroup(viewModel: viewModel)
                 KeyboardShortcutsGroup(viewModel: viewModel)
                 SchedulesSettingsGroup(viewModel: viewModel)
             }

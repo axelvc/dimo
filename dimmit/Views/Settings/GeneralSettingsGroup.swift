@@ -21,16 +21,6 @@ struct GeneralSettingsGroup: View {
                     title: "Open on startup",
                     isOn: openOnStartupBinding
                 )
-                Divider()
-                SettingsToggleRow(
-                    title: "Show menu bar icon",
-                    isOn: showMenuBarIconBinding
-                )
-                Divider()
-                SettingsToggleRow(
-                    title: "Show preset bar",
-                    isOn: showPresetBarBinding
-                )
             }
         }
     }
@@ -39,20 +29,6 @@ struct GeneralSettingsGroup: View {
         Binding(
             get: { viewModel.openOnStartup },
             set: { viewModel.setOpenOnStartup($0) }
-        )
-    }
-
-    private var showPresetBarBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.showPresetBar },
-            set: { viewModel.setShowPresetBar($0) }
-        )
-    }
-
-    private var showMenuBarIconBinding: Binding<Bool> {
-        Binding(
-            get: { viewModel.showMenuBarIcon },
-            set: { viewModel.setShowMenuBarIcon($0) }
         )
     }
 }
