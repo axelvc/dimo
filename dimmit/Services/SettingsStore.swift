@@ -4,6 +4,7 @@ import ServiceManagement
 protocol SettingsStoring: Observable {
     var schedules: [BrightnessSchedule] { get }
     var openOnStartup: Bool { get }
+    var showMenuBarIcon: Bool { get }
     var showPresetBar: Bool { get }
     var notifyOnSchedule: Bool { get }
     var keyboardShortcutsEnabled: Bool { get }
@@ -11,6 +12,7 @@ protocol SettingsStoring: Observable {
 
     func saveSchedules(_ schedules: [BrightnessSchedule])
     func setOpenOnStartup(_ isEnabled: Bool)
+    func setShowMenuBarIcon(_ isEnabled: Bool)
     func setShowPresetBar(_ isEnabled: Bool)
     func setNotifyOnSchedule(_ isEnabled: Bool)
     func setKeyboardShortcutsEnabled(_ isEnabled: Bool)
@@ -24,6 +26,7 @@ final class SettingsStore: SettingsStoring {
     private struct StoredState: Codable {
         var schedules: [BrightnessSchedule]
         var openOnStartup: Bool = false
+        var showMenuBarIcon: Bool = true
         var showPresetBar: Bool = true
         var notifyOnSchedule: Bool = false
         var keyboardShortcutsEnabled: Bool = true
@@ -32,6 +35,7 @@ final class SettingsStore: SettingsStoring {
 
     private(set) var schedules: [BrightnessSchedule] = []
     var openOnStartup = false
+    var showMenuBarIcon = true
     var showPresetBar = true
     var notifyOnSchedule = false
     var keyboardShortcutsEnabled = true
@@ -43,6 +47,7 @@ final class SettingsStore: SettingsStoring {
         {
             self.schedules = state.schedules
             self.openOnStartup = state.openOnStartup
+            self.showMenuBarIcon = state.showMenuBarIcon
             self.showPresetBar = state.showPresetBar
             self.notifyOnSchedule = state.notifyOnSchedule
             self.keyboardShortcutsEnabled = state.keyboardShortcutsEnabled
@@ -60,6 +65,11 @@ final class SettingsStore: SettingsStoring {
     func setOpenOnStartup(_ isEnabled: Bool) {
         openOnStartup = isEnabled
         updateLoginItem(enabled: isEnabled)
+        saveState()
+    }
+
+    func setShowMenuBarIcon(_ isEnabled: Bool) {
+        showMenuBarIcon = isEnabled
         saveState()
     }
 
@@ -87,6 +97,7 @@ final class SettingsStore: SettingsStoring {
         let state = StoredState(
             schedules: schedules,
             openOnStartup: openOnStartup,
+            showMenuBarIcon: showMenuBarIcon,
             showPresetBar: showPresetBar,
             notifyOnSchedule: notifyOnSchedule,
             keyboardShortcutsEnabled: keyboardShortcutsEnabled,

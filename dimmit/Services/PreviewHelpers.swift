@@ -31,6 +31,7 @@ class MockMonitorController: MonitorControlling {
 class MockSettingsStore: SettingsStoring {
     var schedules: [BrightnessSchedule] = []
     var openOnStartup = true
+    var showMenuBarIcon = true
     var showPresetBar = true
     var notifyOnSchedule = false
     var keyboardShortcutsEnabled = true
@@ -42,6 +43,10 @@ class MockSettingsStore: SettingsStoring {
 
     func setOpenOnStartup(_ isEnabled: Bool) {
         openOnStartup = isEnabled
+    }
+
+    func setShowMenuBarIcon(_ isEnabled: Bool) {
+        showMenuBarIcon = isEnabled
     }
 
     func setShowPresetBar(_ isEnabled: Bool) {

@@ -5,8 +5,8 @@
 //  Created by Axel on 22/01/26.
 //
 
-import SwiftUI
 import AppKit
+import SwiftUI
 
 struct MenuBarView: View {
     @Environment(\.monitorController) private var monitorController

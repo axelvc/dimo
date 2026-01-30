@@ -79,6 +79,10 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
         }
     }
 
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        return false
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
         if !windowLifecycleObservers.isEmpty {
             for observer in windowLifecycleObservers {
@@ -139,6 +143,7 @@ final class AppDelegator: NSObject, NSApplicationDelegate {
         let hasUserFacingWindow = NSApp.windows.contains(where: windowCountsForDock)
         let desiredPolicy: NSApplication.ActivationPolicy =
             hasUserFacingWindow ? .regular : .accessory
+
         guard NSApp.activationPolicy() != desiredPolicy else {
             return
         }

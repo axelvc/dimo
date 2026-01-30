@@ -18,6 +18,10 @@ final class SettingsViewModel {
         settingsStore.openOnStartup
     }
 
+    var showMenuBarIcon: Bool {
+        settingsStore.showMenuBarIcon
+    }
+
     var showPresetBar: Bool {
         settingsStore.showPresetBar
     }
@@ -48,6 +52,10 @@ final class SettingsViewModel {
 
     func setOpenOnStartup(_ isEnabled: Bool) {
         settingsStore.setOpenOnStartup(isEnabled)
+    }
+
+    func setShowMenuBarIcon(_ isEnabled: Bool) {
+        settingsStore.setShowMenuBarIcon(isEnabled)
     }
 
     func setShowPresetBar(_ isEnabled: Bool) {
