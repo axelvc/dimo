@@ -1,23 +1,36 @@
 {
-  "fill-specializations" : [
-    {
-      "value" : {
-        "automatic-gradient" : "srgb:0.21176,0.17647,0.24314,1.00000"
-      }
-    },
-    {
-      "appearance" : "dark",
-      "value" : {
-        "automatic-gradient" : "srgb:0.21176,0.17647,0.24314,1.00000"
-      }
-    }
-  ],
   "groups" : [
     {
       "layers" : [
         {
-          "image-name" : "Subtract.svg",
-          "name" : "Subtract"
+          "blend-mode" : "normal",
+          "fill" : "automatic",
+          "glass" : true,
+          "hidden" : false,
+          "image-name" : "dark.svg",
+          "name" : "dark",
+          "opacity" : 1,
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              -256,
+              0
+            ]
+          }
+        },
+        {
+          "blend-mode" : "normal",
+          "glass" : true,
+          "image-name" : "light.svg",
+          "name" : "light",
+          "opacity" : 1,
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              256,
+              0
+            ]
+          }
         }
       ],
       "shadow" : {
@@ -25,7 +38,7 @@
         "opacity" : 0.5
       },
       "translucency" : {
-        "enabled" : true,
+        "enabled" : false,
         "value" : 0.5
       }
     }
