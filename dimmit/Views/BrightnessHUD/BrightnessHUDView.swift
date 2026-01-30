@@ -30,7 +30,7 @@ struct BrightnessHUDView: View {
     }
 
     var body: some View {
-        DisplayControlCard(
+        let card = DisplayControlCard(
             display: display,
             showPresetBar: false,
             onBrightnessChange: { newBrightness in
@@ -38,16 +38,31 @@ struct BrightnessHUDView: View {
                 onBrightnessChange(newBrightness)
             }
         )
-        .glassEffect(.clear, in: RoundedRectangle(cornerRadius: 24))
+
+        Group {
+            if #available(macOS 26.0, *) {
+                card
+                    .glassEffect(.clear, in: RoundedRectangle(cornerRadius: 24))
+            } else {
+                card
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+            }
+        }
         .frame(width: 280)
         .overlay(alignment: .topLeading) {
             if isHovering {
                 Button(action: onClose) {
-                    Image(systemName: "xmark")
+                    let image = Image(systemName: "xmark")
                         .font(.system(size: 8, weight: .bold))
                         .foregroundStyle(.white)
                         .padding(5)
-                        .glassEffect()
+
+                    if #available(macOS 26.0, *) {
+                        image
+                            .glassEffect()
+                    } else {
+                        image
+                    }
                 }
                 .buttonStyle(.plain)
                 .padding(8)

@@ -68,7 +68,6 @@ struct DisplayControlCard: View {
                         }
                         .buttonStyle(.bordered)
                         .controlSize(.small)
-                        .buttonSizing(.flexible)
                     }
                 }
             }
@@ -88,3 +87,4 @@ struct DisplayControlCard: View {
         onBrightnessChange(UInt16(sliderValue))
     }
 }
+
