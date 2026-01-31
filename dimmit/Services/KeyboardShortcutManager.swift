@@ -14,6 +14,10 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
 
+    // CGEventType doesn't expose a .systemDefined case in some SDKs, but the
+    // raw value is stable (kCGEventSystemDefined).
+    private static let cgEventTypeSystemDefinedRawValue: UInt32 = 14
+
     private var didWarnAboutMissingAccessibilityPermission = true
 
     private static let accessibilityPermissionRetryIntervalMS: UInt64 = 2_000
@@ -29,18 +33,41 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
         case decrease
         case increase
 
+        private static let brightnessUpKeyCode: Int64 = 144
+        private static let brightnessDownKeyCode: Int64 = 145
+
+        // IOKit/hidsystem/ev_keymap.h
+        private static let nxKeytypeBrightnessUp: Int = 2
+        private static let nxKeytypeBrightnessDown: Int = 3
+
         static func from(_ event: CGEvent) -> BrightnessKey? {
             let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
 
             switch keyCode {
-            case 145:
+            case brightnessDownKeyCode:
                 return .decrease
-            case 144:
+            case brightnessUpKeyCode:
                 return .increase
             default:
                 return nil
             }
         }
+
+        static func fromMediaKeyCode(_ code: Int) -> BrightnessKey? {
+            switch code {
+            case nxKeytypeBrightnessDown:
+                return .decrease
+            case nxKeytypeBrightnessUp:
+                return .increase
+            default:
+                return nil
+            }
+        }
+    }
+
+    private enum BrightnessKeyEvent {
+        case down(BrightnessKey)
+        case up(BrightnessKey)
     }
 
     private var activeBrightnessKey: BrightnessKey?
@@ -86,7 +113,10 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
         stopAccessibilityPermissionRetryLoop()
 
         // Create event tap
-        let eventMask = (1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue)
+        let eventMask: CGEventMask =
+            (1 << CGEventType.keyDown.rawValue)
+            | (1 << CGEventType.keyUp.rawValue)
+            | (1 << Self.cgEventTypeSystemDefinedRawValue)
 
         guard
             let eventTap = CGEvent.tapCreate(
@@ -170,7 +200,8 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
                 }
 
                 do {
-                    try await Task.sleep(for: .milliseconds(Self.accessibilityPermissionRetryIntervalMS))
+                    try await Task.sleep(
+                        for: .milliseconds(Self.accessibilityPermissionRetryIntervalMS))
                 } catch {
                     break
                 }
@@ -204,14 +235,95 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
     }
 
     private func handleCGEvent(type: CGEventType, event: CGEvent) {
+        guard let brightnessKeyEvent = parseBrightnessKeyEvent(type: type, event: event) else {
+            return
+        }
+
+        switch brightnessKeyEvent {
+        case .down(let key):
+            guard settingsStore.keyboardShortcutsEnabled else {
+                return
+            }
+
+            handleBrightnessKeyDown(key)
+        case .up(let key):
+            if type.rawValue == Self.cgEventTypeSystemDefinedRawValue {
+                guard settingsStore.keyboardShortcutsEnabled else {
+                    return
+                }
+            }
+
+            handleBrightnessKeyUp(key)
+        }
+    }
+
+    private func parseBrightnessKeyEvent(type: CGEventType, event: CGEvent) -> BrightnessKeyEvent? {
+        if type.rawValue == Self.cgEventTypeSystemDefinedRawValue {
+            return parseSystemDefinedBrightnessKeyEvent(event)
+        }
+
         switch type {
         case .keyDown:
-            handleKeyDown(event)
+            return parseKeyDownBrightnessKeyEvent(event)
         case .keyUp:
-            handleKeyUp(event)
+            return parseKeyUpBrightnessKeyEvent(event)
         default:
-            break
+            return nil
         }
+    }
+
+    private func parseSystemDefinedBrightnessKeyEvent(_ event: CGEvent) -> BrightnessKeyEvent? {
+        guard let nsEvent = NSEvent(cgEvent: event) else {
+            return nil
+        }
+
+        guard nsEvent.type == .systemDefined else {
+            return nil
+        }
+
+        guard nsEvent.subtype.rawValue == NX_SUBTYPE_AUX_CONTROL_BUTTONS else {
+            return nil
+        }
+
+        // data1 packs the key code and state:
+        // - high 16 bits: NX_KEYTYPE_*
+        // - bits 8-15 of low 16 bits: NX_KEYDOWN (0xA) / NX_KEYUP (0xB)
+        let data1 = UInt32(bitPattern: Int32(nsEvent.data1))
+        let keyCode = Int((data1 & 0xFFFF_0000) >> 16)
+        let keyState = Int((data1 & 0x0000_FF00) >> 8)
+
+        guard let key = BrightnessKey.fromMediaKeyCode(keyCode) else {
+            return nil
+        }
+
+        switch keyState {
+        case 0xA:  // NX_KEYDOWN
+            return .down(key)
+        case 0xB:  // NX_KEYUP
+            return .up(key)
+        default:
+            return nil
+        }
+    }
+
+    private func parseKeyDownBrightnessKeyEvent(_ event: CGEvent) -> BrightnessKeyEvent? {
+        guard event.flags.contains(.maskSecondaryFn) else {
+            return nil
+        }
+
+        guard let key = BrightnessKey.from(event) else {
+            return nil
+        }
+
+        return .down(key)
+    }
+
+    private func parseKeyUpBrightnessKeyEvent(_ event: CGEvent) -> BrightnessKeyEvent? {
+        guard let key = BrightnessKey.from(event) else {
+            return nil
+        }
+
+        return .up(key)
     }
 
     private func currentBrightnessValue() -> UInt16 {
@@ -219,19 +331,7 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
             ?? (monitorController.monitors.first?.brightness ?? 50)
     }
 
-    private func handleKeyDown(_ event: CGEvent) {
-        guard settingsStore.keyboardShortcutsEnabled else {
-            return
-        }
-
-        guard event.flags.contains(.maskSecondaryFn) else {
-            return
-        }
-
-        guard let key = BrightnessKey.from(event) else {
-            return
-        }
-
+    private func handleBrightnessKeyDown(_ key: BrightnessKey) {
         if activeBrightnessKey != key {
             activeBrightnessKey = key
             let currentBrightness = currentBrightnessValue()
@@ -255,6 +355,10 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
             return
         }
 
+        handleBrightnessKeyUp(key)
+    }
+
+    private func handleBrightnessKeyUp(_ key: BrightnessKey) {
         guard activeBrightnessKey == key else {
             return
         }
