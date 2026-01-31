@@ -14,10 +14,6 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
 
-    // CGEventType doesn't expose a .systemDefined case in some SDKs, but the
-    // raw value is stable (kCGEventSystemDefined).
-    private static let cgEventTypeSystemDefinedRawValue: UInt32 = 14
-
     private var hasWarnedAboutMissingAccessibilityPermission = false
 
     private static let accessibilityPermissionRetryInterval: Duration = .seconds(2)
@@ -25,6 +21,10 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
 
     private static let pendingBrightnessFeedbackInterval: Duration = .milliseconds(50)
     private var pendingBrightnessFeedbackTask: Task<Void, Never>?
+
+    private static let brightnessHoldReleaseTimeout: Duration = .milliseconds(200)
+    private var brightnessHoldReleaseTask: Task<Void, Never>?
+    private var brightnessHoldReleaseGeneration: UInt64 = 0
 
     private var lastBrightnessTarget: UInt16?
     private var lastAppliedPendingBrightness: UInt16?
@@ -168,6 +168,7 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
 
     func stopMonitoring() {
         let hadResources = (eventTap != nil || runLoopSource != nil)
+        cancelBrightnessHoldRelease()
         stopPendingBrightnessFeedback()
         stopAccessibilityPermissionRetryLoop()
 
@@ -255,9 +256,15 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
             }
 
             handleBrightnessKeyDown(key)
+
+            if isSystemDefinedEvent(type) {
+                scheduleBrightnessHoldRelease(for: key)
+            }
         case .up(let key):
-            let isSystemDefinedEvent = (type.rawValue == Self.cgEventTypeSystemDefinedRawValue)
-            if isSystemDefinedEvent, !settingsStore.keyboardShortcutsEnabled {
+            // System-defined media keys (like brightness) commonly arrive as synthesized
+            // press transactions (down/up) and repeats while held, rather than a single
+            // down followed by a later up. We end the hold via inactivity instead.
+            if isSystemDefinedEvent(type) {
                 return
             }
 
@@ -265,8 +272,42 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
         }
     }
 
+    private func scheduleBrightnessHoldRelease(for key: BrightnessKey) {
+        brightnessHoldReleaseGeneration &+= 1
+        let generation = brightnessHoldReleaseGeneration
+
+        brightnessHoldReleaseTask?.cancel()
+        brightnessHoldReleaseTask = Task { @MainActor [weak self] in
+            guard let self else {
+                return
+            }
+
+            do {
+                try await Task.sleep(for: Self.brightnessHoldReleaseTimeout)
+            } catch {
+                return
+            }
+
+            guard !Task.isCancelled else {
+                return
+            }
+
+            guard self.brightnessHoldReleaseGeneration == generation else {
+                return
+            }
+
+            self.brightnessHoldReleaseTask = nil
+            self.handleBrightnessKeyUp(key)
+        }
+    }
+
+    private func cancelBrightnessHoldRelease() {
+        brightnessHoldReleaseTask?.cancel()
+        brightnessHoldReleaseTask = nil
+    }
+
     private func parseBrightnessKeyEvent(type: CGEventType, event: CGEvent) -> BrightnessKeyEvent? {
-        if type.rawValue == Self.cgEventTypeSystemDefinedRawValue {
+        if isSystemDefinedEvent(type) {
             return parseSystemDefinedBrightnessKeyEvent(event)
         }
 
@@ -475,7 +516,15 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
     }
 
     private func resetPendingBrightness() {
+        cancelBrightnessHoldRelease()
         stopPendingBrightnessFeedback()
         brightnessHold = nil
+    }
+
+    // CGEventType doesn't expose a .systemDefined case in some SDKs, but the
+    // raw value is stable (kCGEventSystemDefined).
+    private static let cgEventTypeSystemDefinedRawValue: UInt32 = 14
+    private func isSystemDefinedEvent(_ type: CGEventType) -> Bool {
+        type.rawValue == Self.cgEventTypeSystemDefinedRawValue
     }
 }
