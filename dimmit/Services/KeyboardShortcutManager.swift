@@ -18,12 +18,12 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
     // raw value is stable (kCGEventSystemDefined).
     private static let cgEventTypeSystemDefinedRawValue: UInt32 = 14
 
-    private var didWarnAboutMissingAccessibilityPermission = true
+    private var hasWarnedAboutMissingAccessibilityPermission = false
 
-    private static let accessibilityPermissionRetryIntervalMS: UInt64 = 2_000
+    private static let accessibilityPermissionRetryInterval: Duration = .seconds(2)
     private var accessibilityPermissionRetryTask: Task<Void, Never>?
 
-    private static let pendingBrightnessFeedbackIntervalMS: UInt64 = 50
+    private static let pendingBrightnessFeedbackInterval: Duration = .milliseconds(50)
     private var pendingBrightnessFeedbackTask: Task<Void, Never>?
 
     private var lastBrightnessTarget: UInt16?
@@ -70,9 +70,19 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
         case up(BrightnessKey)
     }
 
-    private var activeBrightnessKey: BrightnessKey?
-    private var brightnessBeforeKeyHold: UInt16?
-    private var pendingBrightness: UInt16?
+    private enum NXKeyState: Int {
+        case down = 0xA  // NX_KEYDOWN
+        case up = 0xB  // NX_KEYUP
+    }
+
+    private struct BrightnessHold {
+        var key: BrightnessKey
+        var initial: UInt16
+        var pending: UInt16
+        var lastApplied: UInt16?
+    }
+
+    private var brightnessHold: BrightnessHold?
 
     var onBrightnessChanged: ((UInt16) -> Void)?
 
@@ -100,16 +110,16 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
         }
 
         guard checkAccessibilityPermissions(promptForPermission: promptForPermission) else {
-            if didWarnAboutMissingAccessibilityPermission {
+            if !hasWarnedAboutMissingAccessibilityPermission {
                 print("⚠️ Accessibility permissions not granted. Keyboard shortcuts will not work.")
-                didWarnAboutMissingAccessibilityPermission = false
+                hasWarnedAboutMissingAccessibilityPermission = true
             }
 
             startAccessibilityPermissionRetryLoop()
             return
         }
 
-        didWarnAboutMissingAccessibilityPermission = true
+        hasWarnedAboutMissingAccessibilityPermission = false
         stopAccessibilityPermissionRetryLoop()
 
         // Create event tap
@@ -200,8 +210,7 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
                 }
 
                 do {
-                    try await Task.sleep(
-                        for: .milliseconds(Self.accessibilityPermissionRetryIntervalMS))
+                    try await Task.sleep(for: Self.accessibilityPermissionRetryInterval)
                 } catch {
                     break
                 }
@@ -247,10 +256,9 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
 
             handleBrightnessKeyDown(key)
         case .up(let key):
-            if type.rawValue == Self.cgEventTypeSystemDefinedRawValue {
-                guard settingsStore.keyboardShortcutsEnabled else {
-                    return
-                }
+            let isSystemDefinedEvent = (type.rawValue == Self.cgEventTypeSystemDefinedRawValue)
+            if isSystemDefinedEvent, !settingsStore.keyboardShortcutsEnabled {
+                return
             }
 
             handleBrightnessKeyUp(key)
@@ -285,25 +293,36 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
             return nil
         }
 
-        // data1 packs the key code and state:
-        // - high 16 bits: NX_KEYTYPE_*
-        // - bits 8-15 of low 16 bits: NX_KEYDOWN (0xA) / NX_KEYUP (0xB)
-        let data1 = UInt32(bitPattern: Int32(nsEvent.data1))
-        let keyCode = Int((data1 & 0xFFFF_0000) >> 16)
-        let keyState = Int((data1 & 0x0000_FF00) >> 8)
-
-        guard let key = BrightnessKey.fromMediaKeyCode(keyCode) else {
+        guard let parsed = parseSystemDefinedAuxControlData1(nsEvent.data1) else {
             return nil
         }
 
-        switch keyState {
-        case 0xA:  // NX_KEYDOWN
+        guard let key = BrightnessKey.fromMediaKeyCode(parsed.keyCode) else {
+            return nil
+        }
+
+        switch parsed.keyState {
+        case .down:
             return .down(key)
-        case 0xB:  // NX_KEYUP
+        case .up:
             return .up(key)
-        default:
+        }
+    }
+
+    // data1 packs the key code and state:
+    // - high 16 bits: NX_KEYTYPE_*
+    // - bits 8-15 of low 16 bits: NX_KEYDOWN (0xA) / NX_KEYUP (0xB)
+    private func parseSystemDefinedAuxControlData1(_ data1: Int) -> (
+        keyCode: Int, keyState: NXKeyState
+    )? {
+        let raw = UInt32(bitPattern: Int32(data1))
+        let keyCode = Int((raw & 0xFFFF_0000) >> 16)
+        let keyStateRaw = Int((raw & 0x0000_FF00) >> 8)
+        guard let keyState = NXKeyState(rawValue: keyStateRaw) else {
             return nil
         }
+
+        return (keyCode: keyCode, keyState: keyState)
     }
 
     private func parseKeyDownBrightnessKeyEvent(_ event: CGEvent) -> BrightnessKeyEvent? {
@@ -327,16 +346,19 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
     }
 
     private func currentBrightnessValue() -> UInt16 {
-        pendingBrightness ?? lastBrightnessTarget
+        brightnessHold?.pending ?? lastBrightnessTarget
             ?? (monitorController.monitors.first?.brightness ?? 50)
     }
 
     private func handleBrightnessKeyDown(_ key: BrightnessKey) {
-        if activeBrightnessKey != key {
-            activeBrightnessKey = key
+        if brightnessHold?.key != key {
             let currentBrightness = currentBrightnessValue()
-            brightnessBeforeKeyHold = currentBrightness
-            pendingBrightness = currentBrightness
+            brightnessHold = BrightnessHold(
+                key: key,
+                initial: currentBrightness,
+                pending: currentBrightness,
+                lastApplied: nil
+            )
             lastBrightnessTarget = currentBrightness
         }
 
@@ -350,16 +372,8 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
         onBrightnessChanged?(newBrightness)
     }
 
-    private func handleKeyUp(_ event: CGEvent) {
-        guard let key = BrightnessKey.from(event) else {
-            return
-        }
-
-        handleBrightnessKeyUp(key)
-    }
-
     private func handleBrightnessKeyUp(_ key: BrightnessKey) {
-        guard activeBrightnessKey == key else {
+        guard brightnessHold?.key == key else {
             return
         }
 
@@ -369,12 +383,12 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
             return
         }
 
-        guard
-            let initialBrightness = brightnessBeforeKeyHold,
-            let finalBrightness = pendingBrightness
-        else {
+        guard let hold = brightnessHold else {
             return
         }
+
+        let initialBrightness = hold.initial
+        let finalBrightness = hold.pending
 
         guard finalBrightness != initialBrightness else {
             return
@@ -385,13 +399,19 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
     }
 
     private func applyPendingBrightnessIfNeeded() {
-        guard let pending = pendingBrightness, pending != lastAppliedPendingBrightness else {
+        guard var hold = brightnessHold else {
+            return
+        }
+
+        let pending = hold.pending
+        guard pending != hold.lastApplied else {
             return
         }
 
         monitorController.setBrightness(pending)
         onBrightnessChanged?(pending)
-        lastAppliedPendingBrightness = pending
+        hold.lastApplied = pending
+        brightnessHold = hold
     }
 
     private func startPendingBrightnessFeedback() {
@@ -405,15 +425,14 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
             }
 
             while !Task.isCancelled {
-                guard self.activeBrightnessKey != nil else {
+                guard self.brightnessHold != nil else {
                     break
                 }
 
                 self.applyPendingBrightnessIfNeeded()
 
                 do {
-                    try await Task.sleep(
-                        for: .milliseconds(Self.pendingBrightnessFeedbackIntervalMS))
+                    try await Task.sleep(for: Self.pendingBrightnessFeedbackInterval)
                 } catch {
                     break
                 }
@@ -426,7 +445,10 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
     private func stopPendingBrightnessFeedback() {
         pendingBrightnessFeedbackTask?.cancel()
         pendingBrightnessFeedbackTask = nil
-        lastAppliedPendingBrightness = nil
+        if var hold = brightnessHold {
+            hold.lastApplied = nil
+            brightnessHold = hold
+        }
     }
 
     private func stepPendingBrightness(for key: BrightnessKey) -> UInt16? {
@@ -445,14 +467,15 @@ class KeyboardShortcutManager: KeyboardShortcutManaging {
             return nil
         }
 
-        pendingBrightness = newBrightness
+        if var hold = brightnessHold {
+            hold.pending = newBrightness
+            brightnessHold = hold
+        }
         return newBrightness
     }
 
     private func resetPendingBrightness() {
         stopPendingBrightnessFeedback()
-        activeBrightnessKey = nil
-        brightnessBeforeKeyHold = nil
-        pendingBrightness = nil
+        brightnessHold = nil
     }
 }
